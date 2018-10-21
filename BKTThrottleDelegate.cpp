@@ -16,24 +16,25 @@ BKTThrottleDelegate::receivedVersion(String version)
 void
 BKTThrottleDelegate::receivedFunctionState(uint8_t func, bool state)
 {
+    state = !state;;   // inverted outputs
     switch(func) {
         case 0:
-            sx1509.digitalWrite(0, state);
+            sx1509.digitalWrite(5, state);
             break;
         case 1:
-            sx1509.digitalWrite(1, state);
-            break;
-        case 2:
-            sx1509.digitalWrite(2, state);
-            break;
-        case 3:
-            sx1509.digitalWrite(3, state);
-            break;
-        case 4:
             sx1509.digitalWrite(4, state);
             break;
+        case 2:
+            sx1509.digitalWrite(3, state);
+            break;
+        case 3:
+            sx1509.digitalWrite(2, state);
+            break;
+        case 4:
+            sx1509.digitalWrite(1, state);
+            break;
         case 9:
-            sx1509.digitalWrite(9, state);
+            sx1509.digitalWrite(6, state);
             break;
         default:
             break;
