@@ -48,6 +48,21 @@
 #include <SparkFunSX1509.h> // Include SX1509 library
 
 
+#include "BKTThrottleDelegate.h"
+
+
+typedef enum TogglePosition {
+  Left = 0,
+  Right = 1,
+  CenterOff = 2,
+  Unknown = 3
+} TogglePosition;
+
+
+
+BKTThrottleDelegate throttleDelegate;
+
+
 // I2C address of the display.  Stick with the default address of 0x70
 // unless you've changed the address jumpers on the back of the display.
 #define DISPLAY_ADDRESS   0x70
@@ -219,6 +234,7 @@ void setup() {
   pinMode(DIR_LEFT, INPUT_PULLUP);
   pinMode(DIR_RIGHT, INPUT_PULLUP);
 
+  wiThrottle.delegate = &throttleDelegate;
 }
 
 
@@ -264,7 +280,7 @@ void updateFastTimeDisplay()
 }
 
 
-int readButton(int intrStatus, int buttonPin, const char *name)
+int readButton(int intrStatus, int buttonPin, int funcNum, const char *name)
 {
   int state = 0;
 
@@ -272,6 +288,9 @@ int readButton(int intrStatus, int buttonPin, const char *name)
     int state = sx1509.digitalRead(buttonPin);
     Serial.print(name); Serial.print(" BUTTON: ");
     Serial.println(state ? "RELEASED" : "PRESSED");
+
+    wiThrottle.setFunction(funcNum, state ? false : true);
+    
   }
   return state;
 
@@ -283,12 +302,12 @@ void readButtons()
   unsigned int intStatus = sx1509.interruptSource();
   // For debugging handiness, print the intStatus variable.
   // Each bit in intStatus represents a single SX1509 IO.
-  readButton(intStatus, BRAKE, "BRAKE");
-  readButton(intStatus, BUTTON1, "BUTTON1");
-  readButton(intStatus, BUTTON2, "BUTTON2");
-  readButton(intStatus, BUTTON3, "BUTTON3");
-  readButton(intStatus, BUTTON4, "BUTTON4");
-  readButton(intStatus, BUTTON5, "BUTTON5");
+  readButton(intStatus, BRAKE, 9, "BRAKE");
+  readButton(intStatus, BUTTON1, 0, "BUTTON1");
+  readButton(intStatus, BUTTON2, 1, "BUTTON2");
+  readButton(intStatus, BUTTON3, 2, "BUTTON3");
+  readButton(intStatus, BUTTON4, 3, "BUTTON4");
+  readButton(intStatus, BUTTON5, 4, "BUTTON5");
 
 
 
@@ -296,72 +315,96 @@ void readButtons()
 
 
 int previousSpeedValue = -1;
-int actualSpeedValue = -1;
-int previousDirection = -1;
+int penultimateSpeedValue = -1;
+
+TogglePosition previousTogglePosition = Unknown;
+
+
+
+Direction directionFromTogglePosition(TogglePosition position)
+{
+  Direction value = Forward;
+
+  if (position == Left) {
+    value = Reverse;
+  }
+
+  Serial.print("TogglePosition "); Serial.print(position); Serial.print(" => Direction "); Serial.println(value);
+  return value;
+}
+
 
 void readSpeed()
 {
   bool speedChanged = false;
-  bool directionChanged = false;
+  bool togglePositionChanged = false;
 
   int rawSpeedValue = analogRead(SPEED_KNOB);
   int speedValue = map(rawSpeedValue, 0, 4095, 0, 126);
 
   int d1 = !digitalRead(DIR_LEFT);
   int d2 = !digitalRead(DIR_RIGHT);
-  int direction;
+  TogglePosition togglePosition;
 
   if (d1 && d2) {
-    direction = 3;  // SHOULD NEVER HAPPEN
+    togglePosition = Unknown;  // SHOULD NEVER HAPPEN
   }
   else if (d1) {
-    direction = 1;
+    togglePosition = Left;
   }
   else if (d2) {
-    direction = 2;
+    togglePosition = Right;
   }
   else {
     // center off position
     speedValue = 0;
-    direction = 0;
+    togglePosition = CenterOff;
   }
 
-  if (direction != previousDirection) {
-    previousDirection = direction;
-    directionChanged = true;
+  if (togglePosition != previousTogglePosition) {
+    togglePositionChanged = true;
+    previousTogglePosition = togglePosition;
   }
 
-  if (speedValue != actualSpeedValue && speedValue != previousSpeedValue) {
-    previousSpeedValue = actualSpeedValue;
-    actualSpeedValue = speedValue;
+  if (speedValue != previousSpeedValue && speedValue != penultimateSpeedValue) {
+    penultimateSpeedValue = previousSpeedValue;
+    previousSpeedValue = speedValue;
     speedChanged = true;
   }
 
-  if (speedChanged || directionChanged) {
+  if (speedChanged || togglePositionChanged) {
     Serial.print("SPEED = (raw)"); Serial.print(rawSpeedValue);
     Serial.print(" (mapped)"); Serial.print(speedValue);
-    switch (direction) {
-      case 0:
+    switch (togglePosition) {
+      case CenterOff:
         Serial.println(" CENTER OFF");
         break;
-      case 1:
+      case Left:
         Serial.println(" LEFT");
         break;
-      case 2:
+      case Right:
         Serial.println(" RIGHT");
         break;
       default:
-        Serial.println(" SHOUDLN'T HAPPEN");
+        Serial.println(" SHOULDN'T HAPPEN");
         break;
     }
 
-    if (directionChanged) {
-      wiThrottle.setDirection(direction);
+    if (togglePositionChanged && (togglePosition==Left || togglePosition==Right)) {
+      // the WiThrottle protocol only does Fwd & Reverse, so any other position
+      // just gets ignored at this time.  
+      static Direction lastDirection = Forward;
+      Direction d = directionFromTogglePosition(togglePosition);
+
+      if (d != lastDirection) {
+        wiThrottle.setDirection(d);
+        lastDirection = d;
+      }
+      
     }
     if (speedChanged) {
       wiThrottle.setSpeed(speedValue);
     }
-
   }
 
 }
@@ -404,6 +447,7 @@ void loop()
     }
     else {
       Serial.println("connected succeeded");
+      client.setNoDelay(true); // disable Nagle & packet coalescing
       wiThrottle.connect(&client);
     }
     delay(1000);
