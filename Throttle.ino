@@ -373,6 +373,7 @@ void readSpeed()
   }
 
   if (speedChanged || togglePositionChanged) {
+#if 0
     Serial.print("SPEED = (raw)"); Serial.print(rawSpeedValue);
     Serial.print(" (mapped)"); Serial.print(speedValue);
     switch (togglePosition) {
@@ -389,6 +390,7 @@ void readSpeed()
         Serial.println(" SHOULDN'T HAPPEN");
         break;
     }
+#endif
 
     if (togglePositionChanged && (togglePosition==Left || togglePosition==Right)) {
       // the WiThrottle protocol only does Fwd & Reverse, so any other position
