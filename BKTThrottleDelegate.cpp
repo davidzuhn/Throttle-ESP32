@@ -1,8 +1,7 @@
 
 #include "BKTThrottleDelegate.h"
 
-#include <SparkFunSX1509.h>
-extern SX1509 sx1509;
+#include "hardware.h"
 
 
 void

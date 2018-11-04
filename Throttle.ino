@@ -1,16 +1,23 @@
 /*
-   Fast Clock
+   Throttle
 
-   This sketch implements a Digital Fast Time clock.
+   This sketch implements a Model Railroad Throttle using the WiThrottle protocl.
 
-   The hardware is use is an Adafruit Huzzah32 (ESP32 based),
-   with a 7-segment display feather wing.
+   The hardware is use is an Adafruit Huzzah32 (ESP32 based), with additional
+   supporting hardware, including
+     * SX1509 GPIO expander (up to 16 I/O lines)
+     * RGB LED
+     * 10K potentiometer (for Analog reads)
+     * SPDT center off toggle switch
+     * LIS3DH accelerometer
+     * DRV2605 haptic feedback controller
+     * 4 digit display
 
    Huzzah32 - https://www.adafruit.com/product/3405
-   Display  - https://www.adafruit.com/product/3108
-
-   This combination makes a battery powered portable fast clock for your
-   layout.  Or power it with 5V and you have a permanent installation.
+   SX1509   - https://www.sparkfun.com/products/13601
+   LIS3DH   - https://www.adafruit.com/product/2809
+   DRV2605  - https://www.adafruit.com/product/2305
+   display  - https://www.adafruit.com/product/3106
 
    Copyright 2018 by david d zuhn <zoo@blueknobby.com>
 
@@ -20,6 +27,9 @@
 
    You may use this work for any purposes, provided that you make your
    version available to anyone else.
+
+   If you make a commercial product out of this software, please consider
+   sending a sample to the author of this code.
 */
 
 // You need to change these values to suit your network...
@@ -47,9 +57,10 @@
 
 #include <SparkFunSX1509.h> // Include SX1509 library
 
-
+#include "RGBLED.h"
 #include "BKTThrottleDelegate.h"
 
+#include "hardware.h"
 
 typedef enum TogglePosition {
   Left = 0,
@@ -65,11 +76,12 @@ BKTThrottleDelegate throttleDelegate;
 
 // I2C address of the display.  Stick with the default address of 0x70
 // unless you've changed the address jumpers on the back of the display.
-#define DISPLAY_ADDRESS   0x70
+#define DISPLAY_ADDRESS   (0x70)
 
 // I2C address of the SX1509 GPIO expander.
-#define SX1509_ADDRESS  0x3E
+#define SX1509_ADDRESS  (0x3E)
 
+// the INTR output pin of the SX1509 is attached to this pin on the ESP32
 #define SX1509_INTR_PIN (A10)
 
 
@@ -109,6 +121,7 @@ Chrono speedCheck;
 WiFiClient client;
 WiThrottle wiThrottle;
 SX1509 sx1509;
+SX1509RGBLED statusLED(sx1509, RGB_RED, RGB_GREEN, RGB_BLUE);
 
 Adafruit_7segment clockDisplay = Adafruit_7segment();
 
@@ -124,8 +137,8 @@ void wifiOnConnect() {
 void wifiOnDisconnect() {
   client.stop();
   wiThrottle.disconnect();
-  sx1509.analogWrite(RGB_BLUE, 0);
-  sx1509.analogWrite(RGB_GREEN, 0x40);
+  statusLED.setWifiDisconnected();
+
 
   Serial.println("STA Disconnected");
 }
@@ -158,64 +171,46 @@ void WiFiEvent(WiFiEvent_t event) {
 bool handleSX1509Interrupt = false;
 
 
+
+void setupButtonPin(SX1509& sx1509, int pin)
+{
+    sx1509.pinMode(pin, INPUT_PULLUP);
+    sx1509.enableInterrupt(pin, CHANGE);
+    sx1509.debouncePin(pin);
+}
+
+
 void setup() {
-  analogReadResolution(12);   // 0-4095, no matter what the hardware support
+  Serial.begin(115200);
 
   clockDisplay.begin(DISPLAY_ADDRESS);
   clockDisplay.clear();
 
-  Serial.begin(115200);
-
-
-
-
-  // Call io.begin(<address>) to initialize the SX1509. If it
-  // successfully communicates, it'll return 1.
+  // Call .begin(<address>) to initialize the SX1509. If it successfully
+  // communicates, it'll return true.
   if (!sx1509.begin(SX1509_ADDRESS))
   {
     while (1) ; // If we fail to communicate, loop forever.
+    // ideally this should do some sort of external notification
   }
 
   Serial.println("SX1509 initialized");
 
-  // The SX1509 has built-in debounce features, so a single
-  // button-press doesn't accidentally create multiple ints.
-  // Use io.debounceTime(<time_ms>) to set the GLOBAL SX1509
-  // debounce time.
+  statusLED.begin();
+
+  // The SX1509 has built-in debounce features, so a single button-press
+  // doesn't accidentally create multiple ints.  Use
+  // .debounceTime(<time_ms>) to set the GLOBAL SX1509 debounce time.
+  //
   // <time_ms> can be either 0, 1, 2, 4, 8, 16, 32, or 64 ms.
-  sx1509.debounceTime(16); // Set debounce time to 32 ms.
+  sx1509.debounceTime(16);
 
-
-  sx1509.pinMode(RGB_RED, ANALOG_OUTPUT);
-  sx1509.pinMode(RGB_GREEN, ANALOG_OUTPUT);
-  sx1509.pinMode(RGB_BLUE, ANALOG_OUTPUT);
-  sx1509.analogWrite(RGB_RED, 0);
-  sx1509.analogWrite(RGB_GREEN, 0);
-  sx1509.analogWrite(RGB_BLUE, 0);
-
-  sx1509.pinMode(BRAKE,   INPUT_PULLUP);
-  sx1509.enableInterrupt(BRAKE, CHANGE);
-  sx1509.debouncePin(BRAKE);
-
-  sx1509.pinMode(BUTTON1, INPUT_PULLUP);
-  sx1509.enableInterrupt(BUTTON1, CHANGE);
-  sx1509.debouncePin(BUTTON1);
-
-  sx1509.pinMode(BUTTON2, INPUT_PULLUP);
-  sx1509.enableInterrupt(BUTTON2, CHANGE);
-  sx1509.debouncePin(BUTTON2);
-
-  sx1509.pinMode(BUTTON3, INPUT_PULLUP);
-  sx1509.enableInterrupt(BUTTON3, CHANGE);
-  sx1509.debouncePin(BUTTON3);
-
-  sx1509.pinMode(BUTTON4, INPUT_PULLUP);
-  sx1509.enableInterrupt(BUTTON4, CHANGE);
-  sx1509.debouncePin(BUTTON4);
-
-  sx1509.pinMode(BUTTON5, INPUT_PULLUP);
-  sx1509.enableInterrupt(BUTTON5, CHANGE);
-  sx1509.debouncePin(BUTTON5);
+  setupButtonPin(sx1509, BRAKE);
+  setupButtonPin(sx1509, BUTTON1);
+  setupButtonPin(sx1509, BUTTON2);
+  setupButtonPin(sx1509, BUTTON3);
+  setupButtonPin(sx1509, BUTTON4);
+  setupButtonPin(sx1509, BUTTON5);
 
   sx1509.pinMode(LED1, OUTPUT);
   sx1509.pinMode(LED2, OUTPUT);
@@ -233,6 +228,8 @@ void setup() {
 
   pinMode(DIR_LEFT, INPUT_PULLUP);
   pinMode(DIR_RIGHT, INPUT_PULLUP);
+
+  analogReadResolution(12);   // 0-4095, no matter what the hardware support
 
   wiThrottle.delegate = &throttleDelegate;
 }
@@ -280,37 +277,37 @@ void updateFastTimeDisplay()
 }
 
 
-int readButton(int intrStatus, int buttonPin, int funcNum, const char *name)
+void
+readButton(int intrStatus, int buttonPin, int funcNum, const char *name)
 {
-  int state = 0;
-
   if (intrStatus & (1 << buttonPin)) {
-    int state = sx1509.digitalRead(buttonPin);
+    int pressed = !sx1509.digitalRead(buttonPin);
     Serial.print(name); Serial.print(" BUTTON: ");
-    Serial.println(state ? "RELEASED" : "PRESSED");
+    Serial.println(pressed ? "PRESSED" : "RELEASED");
 
-    wiThrottle.setFunction(funcNum, state ? false : true);
-    
+    wiThrottle.setFunction(funcNum, pressed ? true : false);
   }
-  return state;
-
 }
 
 
+/* This function gets called whenever the interrupt handler indicates that
+ * we need to process a button change event from the SX1509.  Only those
+ * buttons that have changed will be indicated in the interrupt source,
+ * so we read the new value and send the function state accordingly.
+ */
 void readButtons()
 {
-  unsigned int intStatus = sx1509.interruptSource();
+  unsigned int intrStatus = sx1509.interruptSource();
   // For debugging handiness, print the intStatus variable.
-  // Each bit in intStatus represents a single SX1509 IO.
-  readButton(intStatus, BRAKE, 9, "BRAKE");
-  readButton(intStatus, BUTTON1, 0, "BUTTON1");
-  readButton(intStatus, BUTTON2, 1, "BUTTON2");
-  readButton(intStatus, BUTTON3, 2, "BUTTON3");
-  readButton(intStatus, BUTTON4, 3, "BUTTON4");
-  readButton(intStatus, BUTTON5, 4, "BUTTON5");
 
+  // Each bit in intStatus represents a single SX1509 I/O.
+  readButton(intrStatus, BRAKE,   9, "BRAKE");
 
-
+  readButton(intrStatus, BUTTON1, 0, "BUTTON1");
+  readButton(intrStatus, BUTTON2, 1, "BUTTON2");
+  readButton(intrStatus, BUTTON3, 2, "BUTTON3");
+  readButton(intrStatus, BUTTON4, 3, "BUTTON4");
+  readButton(intrStatus, BUTTON5, 4, "BUTTON5");
 }
 
 
@@ -334,6 +331,28 @@ Direction directionFromTogglePosition(TogglePosition position)
 }
 
 
+TogglePosition readTogglePosition()
+{
+    TogglePosition togglePosition = Unknown; // This should never happen
+
+    int d1 = !digitalRead(DIR_LEFT);
+    int d2 = !digitalRead(DIR_RIGHT);
+
+    if (!d1 && !d2) {
+        togglePosition = CenterOff;
+    }
+    else if (d1) {
+        togglePosition = Left;
+    }
+    else if (d2) {
+        togglePosition = Right;
+    }
+
+    return togglePosition;
+}
+
+
+
 void readSpeed()
 {
   bool speedChanged = false;
@@ -342,23 +361,15 @@ void readSpeed()
   int rawSpeedValue = analogRead(SPEED_KNOB);
   int speedValue = map(rawSpeedValue, 0, 4095, 0, 126);
 
-  int d1 = !digitalRead(DIR_LEFT);
-  int d2 = !digitalRead(DIR_RIGHT);
-  TogglePosition togglePosition;
+  TogglePosition togglePosition = readTogglePosition();
 
-  if (d1 && d2) {
-    togglePosition = Unknown;  // SHOULD NEVER HAPPEN
-  }
-  else if (d1) {
-    togglePosition = Left;
-  }
-  else if (d2) {
-    togglePosition = Right;
-  }
-  else {
-    // center off position
-    speedValue = 0;
-    togglePosition = CenterOff;
+  if (togglePosition == CenterOff) {
+      // center off position
+      speedValue = 0;
+      if (previousSpeedValue != 0) {
+          previousSpeedValue = penultimateSpeedValue = 0;
+          speedChanged = true;
+      }
   }
 
   if (togglePosition != previousTogglePosition) {
@@ -366,11 +377,24 @@ void readSpeed()
     previousTogglePosition = togglePosition;
   }
 
+
   if (speedValue != previousSpeedValue && speedValue != penultimateSpeedValue) {
     penultimateSpeedValue = previousSpeedValue;
     previousSpeedValue = speedValue;
     speedChanged = true;
   }
+
+
+#if 0
+  Serial.print("d1:"); Serial.print(d1);
+  Serial.print("  d2:"); Serial.print(d2);
+  Serial.print("  speedValue:"); Serial.print(speedValue);
+  Serial.print("  previous:"); Serial.print(previousSpeedValue);
+  Serial.print("  penultimate:"); Serial.print(penultimateSpeedValue);
+  Serial.print("  speedChanged:"); Serial.print(speedChanged ? "true" : "false");
+  Serial.print("  toggleChanged:"); Serial.println(togglePositionChanged ? "true" : "false");
+#endif
+
 
   if (speedChanged || togglePositionChanged) {
 #if 0
@@ -394,7 +418,7 @@ void readSpeed()
 
     if (togglePositionChanged && (togglePosition==Left || togglePosition==Right)) {
       // the WiThrottle protocol only does Fwd & Reverse, so any other position
-      // just gets ignored at this time.  
+      // just gets ignored at this time.
       static Direction lastDirection = Forward;
       Direction d = directionFromTogglePosition(togglePosition);
 
@@ -402,7 +426,7 @@ void readSpeed()
         wiThrottle.setDirection(d);
         lastDirection = d;
       }
-      
+
     }
     if (speedChanged) {
       wiThrottle.setSpeed(speedValue);
@@ -415,19 +439,17 @@ void readSpeed()
 
 
 
-
+// This only executes once, as it contains it's own loop
 void loop()
 {
   bool addressSelected = false;
+  bool nameSent = false;
   String selectedAddress = "S21";
 
   clockDisplay.clear();
 
-
-  sx1509.analogWrite(RGB_RED, 0x0);
-  sx1509.analogWrite(RGB_BLUE, 0x0);
-  sx1509.analogWrite(RGB_GREEN, 0x40);
-
+  // BLE is not connected at this time, nor is WiFI
+  statusLED.setWifiDisconnected();
 
   WiFi.disconnect();
   WiFi.onEvent(WiFiEvent);
@@ -443,6 +465,9 @@ void loop()
     Serial.print(".");
   }
 
+  // light blue when connected to WiThrottle server
+  statusLED.setWifiConnected();
+
   while (! client.connected()) {
     if (!client.connect(host.c_str(), port)) {
       Serial.println("connection failed");
@@ -456,34 +481,37 @@ void loop()
     Serial.print(":");
   }
 
-  sx1509.analogWrite(RGB_GREEN, 0);
-  sx1509.analogWrite(RGB_BLUE, 0x20);
-
+  // bright blue when connected to WiThrottle server
+  statusLED.setThrottleConnected();
 
   while (true) {
-
     if (wiThrottle.check()) {
       if (wiThrottle.clockChanged) {
         updateFastTimeDisplay();
       }
-      if (wiThrottle.protocolVersionChanged) {
-        wiThrottle.setDeviceName("mylittlethrottle");
-      }
       if (wiThrottle.heartbeatChanged) {
-        wiThrottle.requireHeartbeat(true);
+        wiThrottle.requireHeartbeat();
       }
       if (! client.connected()) {
-        wiThrottle.disconnect();
-        Serial.println("Network Disconnected");
-        break;
+          statusLED.setWifiDisconnected();
+          wiThrottle.disconnect();
+          Serial.println("Network Disconnected");
+          return;
       }
       else {
-        sx1509.analogWrite(RGB_BLUE, 0x80);
       }
       if (handleSX1509Interrupt) {
         readButtons();
         handleSX1509Interrupt = false;
       }
+
+#if 1
+      if (!nameSent) {
+          wiThrottle.setDeviceName("mylittlethrottle");
+          nameSent = true;
+      }
+#endif
+
 
 #if 1
       if (!addressSelected) {
