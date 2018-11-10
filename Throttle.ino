@@ -116,6 +116,7 @@ const int port = 12090;
 
 static volatile bool wifi_connected = false;
 
+Chrono speedPotRead;
 Chrono speedCheck;
 
 WiFiClient client;
@@ -353,13 +354,25 @@ TogglePosition readTogglePosition()
 
 
 
+int speedAccumulator;
+
+#define SPEED_WEIGHT (0.80)
+
+void readSpeedPot()
+{
+    int rawSpeedValue = analogRead(SPEED_KNOB);
+    int reading = map(rawSpeedValue, 0, 4095, 0, 126);
+
+    speedAccumulator = SPEED_WEIGHT * speedAccumulator + reading;
+}
+
+
 void readSpeed()
 {
   bool speedChanged = false;
   bool togglePositionChanged = false;
 
-  int rawSpeedValue = analogRead(SPEED_KNOB);
-  int speedValue = map(rawSpeedValue, 0, 4095, 0, 126);
+  int speedValue = (((speedAccumulator/5) / (1.0 - SPEED_WEIGHT))/5);
 
   TogglePosition togglePosition = readTogglePosition();
 
@@ -385,9 +398,8 @@ void readSpeed()
   }
 
 
-#if 0
-  Serial.print("d1:"); Serial.print(d1);
-  Serial.print("  d2:"); Serial.print(d2);
+#if 1
+  Serial.print("speedAccumulator:"); Serial.print(speedAccumulator);
   Serial.print("  speedValue:"); Serial.print(speedValue);
   Serial.print("  previous:"); Serial.print(previousSpeedValue);
   Serial.print("  penultimate:"); Serial.print(penultimateSpeedValue);
@@ -439,7 +451,11 @@ void readSpeed()
 
 
 
-// This only executes once, as it contains it's own loop
+// This loop waits for the WiFi connection, and the WiThrottle connection
+// once that's lost, it exits and restarts
+
+// unlike the usual Arduino loop() which is called many many times a second
+// this one contains its own repeat loop for action checks
 void loop()
 {
   bool addressSelected = false;
@@ -498,8 +514,7 @@ void loop()
           Serial.println("Network Disconnected");
           return;
       }
-      else {
-      }
+
       if (handleSX1509Interrupt) {
         readButtons();
         handleSX1509Interrupt = false;
@@ -518,6 +533,11 @@ void loop()
         addressSelected = wiThrottle.addLocomotive(selectedAddress);
       }
 #endif
+
+      if (speedPotRead.hasPassed(1000 / (15 * 4))) {
+          speedPotRead.restart();
+          readSpeedPot();
+      }
 
       if (speedCheck.hasPassed(1000 / 15)) {
         speedCheck.restart();
