@@ -1,0 +1,27 @@
+# need BLE variables for
+
+Wifi SSID
+Wifi password
+server IP address (or name)
+
+==> initiate Wifi connection
+
+
+throttle name (used for WIFI hostname, BLE device name, WiThrottle name)
+
+
+loco address to select
+==> initiate locomotive selection
+==> release locomotive
+
+swap direction toggle
+function mapping (e.g., BRAKE => F9)
+
+
+speed
+direction
+function state
+function names  (these can change on the fly, with an address selection)
+
+fast time (read from withrottle server, update to app via BLE)
+real time (read from phone, update RTC/logging on the throttle)
