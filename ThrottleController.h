@@ -1,3 +1,4 @@
+// -*- c++ -*-
 #pragma once
 
 #include <string>
@@ -21,44 +22,6 @@
 #include "RGBLED.h"
 
 
-
-// I2C address of the display.  Stick with the default address of 0x70
-// unless you've changed the address jumpers on the back of the display.
-#define DISPLAY_ADDRESS   (0x70)
-
-// I2C address of the SX1509 GPIO expander.
-#define SX1509_ADDRESS  (0x3E)
-
-// the INTR output pin of the SX1509 is attached to this pin on the ESP32
-#define SX1509_INTR_PIN (A10)
-
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// These are pin numbers on the SX1509 GPIO extender
-//
-#define RGB_RED (15)
-#define RGB_GREEN (14)
-#define RGB_BLUE (13)
-#define BUTTON1 (9)
-#define BUTTON2 (10)
-#define BUTTON3 (11)
-#define BUTTON4 (12)
-#define BUTTON5 (7)
-#define BRAKE (8)
-
-#define LED1 (0)
-#define LED2 (1)
-#define LED3 (2)
-#define LED4 (3)
-#define LED5 (4)
-#define LED6 (5)
-#define LED7 (6)
-////////////////////////////////////////////////////////////////////////////////
-
-#define SPEED_KNOB (A4)
-#define DIR_LEFT (15)
-#define DIR_RIGHT (33)
 
 
 typedef enum TogglePosition {
@@ -106,6 +69,8 @@ class ThrottleController: public WiThrottleDelegate
     void readSpeedPot();
     TogglePosition readTogglePosition();
     void setupButtonPin(int pin);
+    void setupLEDPin(int pin);
+    void setupSX1509();
     void sx1509_isr();
     void updateFastTimeDisplay();
 
