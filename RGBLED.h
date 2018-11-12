@@ -12,7 +12,9 @@ class SX1509RGBLED
         redPin(redPin),
         greenPin(greenPin),
         bluePin(bluePin),
-        commonAnode(commonAnode) { }
+        commonAnode(commonAnode)
+    {
+    }
 
     /* Configure the appropriate SX1509 pins and then turn LED OFF
      */
