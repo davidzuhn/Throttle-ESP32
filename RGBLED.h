@@ -33,6 +33,7 @@ class SX1509RGBLED
      *
      * LEDs configured with a common anode still use these same logical
      * values, but the actual values written must be handled separately
+     * as physical 0xFF is off and 0x00 is full brightness
      */
 
     void
