@@ -38,9 +38,9 @@ ThrottleController controller;
 
 
 void setup() {
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  controller.begin();
+    controller.begin();
 }
 
 

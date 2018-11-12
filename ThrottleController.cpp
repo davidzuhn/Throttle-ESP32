@@ -2,10 +2,58 @@
 
 #include <FunctionalInterrupt.h>
 
+
+// TODO: these need to be modifiable via a BLE interface
 #define WIFI_SSID     "myownlittleidaho"
 #define WIFI_PASSWORD "goslowdown"
-
 #define JMRI_SERVER_ADDRESS "192.168.22.20"
+
+
+// LEDs are in an active-low configuration
+#define SX1509_OFF (1)
+#define SX1509_ON  (0)
+
+// I2C address of the display.  Stick with the default address of 0x70
+// unless you've changed the address jumpers on the back of the display.
+#define DISPLAY_ADDRESS   (0x70)
+
+// I2C address of the SX1509 GPIO expander.
+#define SX1509_ADDRESS  (0x3E)
+
+// the INTR output pin of the SX1509 is attached to this pin on the ESP32
+#define SX1509_INTR_PIN (A10)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// These are pin numbers on the SX1509 GPIO extender
+//
+#define RGB_RED (15)
+#define RGB_GREEN (14)
+#define RGB_BLUE (13)
+#define BUTTON1 (9)
+#define BUTTON2 (10)
+#define BUTTON3 (11)
+#define BUTTON4 (12)
+#define BUTTON5 (7)
+#define BRAKE (8)
+
+#define LED1 (0)
+#define LED2 (1)
+#define LED3 (2)
+#define LED4 (3)
+#define LED5 (4)
+#define LED6 (5)
+#define LED7 (6)
+//
+////////////////////////////////////////////////////////////////////////////////
+
+#define SPEED_KNOB (A4)
+#define DIR_LEFT (15)
+#define DIR_RIGHT (33)
+
+
+use std::placeholders;
 
 ThrottleController::ThrottleController():
     client(),
@@ -35,22 +83,8 @@ ThrottleController::sx1509_isr()
 
 
 bool
-ThrottleController::begin()
+ThrottleController::setSX1509()
 {
-
-  clockDisplay.begin(DISPLAY_ADDRESS);
-  clockDisplay.clear();
-
-  // Call .begin(<address>) to initialize the SX1509. If it successfully
-  // communicates, it'll return true.
-  if (!sx1509.begin(SX1509_ADDRESS))
-  {
-    while (1) ; // If we fail to communicate, loop forever.
-    // ideally this should do some sort of external notification
-  }
-
-  Serial.println("SX1509 initialized");
-
   statusLED.begin();
 
   // The SX1509 has built-in debounce features, so a single button-press
@@ -67,25 +101,51 @@ ThrottleController::begin()
   setupButtonPin(BUTTON4);
   setupButtonPin(BUTTON5);
 
-  sx1509.pinMode(LED1, OUTPUT);
-  sx1509.pinMode(LED2, OUTPUT);
-  sx1509.pinMode(LED3, OUTPUT);
-  sx1509.pinMode(LED4, OUTPUT);
-  sx1509.pinMode(LED5, OUTPUT);
-  sx1509.pinMode(LED6, OUTPUT);
-  sx1509.pinMode(LED7, OUTPUT);
+  setupLEDPin(LED1);
+  setupLEDPin(LED2);
+  setupLEDPin(LED3);
+  setupLEDPin(LED4);
+  setupLEDPin(LED5);
+  setupLEDPin(LED6);
+  setupLEDPin(LED7);
 
-  // Attach an Arduino interrupt to the interrupt pin. Call
-  // the button function, whenever the pin goes from HIGH to
-  // LOW.
+
+  // Attach an Arduino interrupt to the interrupt pin. Call the ISR
+  // function, whenever the pin goes from HIGH to LOW.
   attachInterrupt(SX1509_INTR_PIN, std::bind(&ThrottleController::sx1509_isr, this), FALLING);
+
+  Serial.println("SX1509 initialized");
+}
+
+
+bool
+ThrottleController::begin()
+{
+
+  clockDisplay.begin(DISPLAY_ADDRESS);
+  clockDisplay.clear();
+
+  // Call .begin(<address>) to initialize the SX1509. If it successfully
+  // communicates, it'll return true.
+  if (!sx1509.begin(SX1509_ADDRESS))
+  {
+      while (1) {
+	  // If we fail to communicate, loop forever.
+      }
+    // ideally this should do some sort of external notification
+    // this might be a good reason to put the status LED on GPIO's on the ESP32
+  }
+
+  setupSX1509();
+
+
 
   pinMode(DIR_LEFT, INPUT_PULLUP);
   pinMode(DIR_RIGHT, INPUT_PULLUP);
 
   analogReadResolution(12);   // 0-4095, no matter what the hardware support
 
-  wiThrottle.delegate = this;
+  wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
 }
 
 
@@ -213,7 +273,7 @@ ThrottleController::loop()
     statusLED.setWifiDisconnected();
 
     WiFi.disconnect();
-    WiFi.onEvent(std::bind(&ThrottleController::wifiEvent, this, std::placeholders::_1));
+    WiFi.onEvent(std::bind(&ThrottleController::wifiEvent, this, _1));
     WiFi.mode(WIFI_MODE_STA);
 
     WiFi.begin(ssid.c_str(), password.c_str());
@@ -303,11 +363,19 @@ ThrottleController::setupButtonPin(int pin)
 }
 
 
+void
+ThrottleController::setupLEDPin(int pin)
+{
+    sx1509.pinMode(pin, OUTPUT);
+    sx1509.digitalWrite(SX1509_OFF);
+}
+
+
 
 void
 ThrottleController::receivedVersion(String version)
 {
-    Serial.print("received version string ");
+    Serial.print("received protocol version string ");
     Serial.println(version);
 }
 
@@ -316,6 +384,8 @@ void
 ThrottleController::receivedFunctionState(uint8_t func, bool state)
 {
     state = !state;;   // inverted outputs
+
+    // TODO: these mappings should be part of user-controllable configuration
     switch(func) {
         case 0:
             sx1509.digitalWrite(5, state);
@@ -432,7 +502,7 @@ ThrottleController::readButtons()
 
 void ThrottleController::updateFastTimeDisplay()
 {
-    static bool blinkColon = true;
+    static int blinkColon = SX1509_OFF;
     int hour = wiThrottle.fastTimeHours();
     int minutes = wiThrottle.fastTimeMinutes();
 
