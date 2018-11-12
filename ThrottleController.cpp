@@ -53,7 +53,7 @@
 #define DIR_RIGHT (33)
 
 
-use std::placeholders;
+using namespace std::placeholders;
 
 ThrottleController::ThrottleController():
     client(),
@@ -82,8 +82,8 @@ ThrottleController::sx1509_isr()
 }
 
 
-bool
-ThrottleController::setSX1509()
+void
+ThrottleController::setupSX1509()
 {
   statusLED.begin();
 
@@ -367,7 +367,7 @@ void
 ThrottleController::setupLEDPin(int pin)
 {
     sx1509.pinMode(pin, OUTPUT);
-    sx1509.digitalWrite(SX1509_OFF);
+    sx1509.digitalWrite(pin, SX1509_OFF);
 }
 
 
