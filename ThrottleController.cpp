@@ -528,7 +528,7 @@ void ThrottleController::updateFastTimeDisplay()
     // (which happens every second).
     blinkColon = !blinkColon;
     clockDisplay.drawColon(blinkColon);
-    sx1509.digitalWrite(LED1, blinkColon);
+    sx1509.digitalWrite(LED1, blinkColon ? SX1509_ON : SX1509_OFF);
 
     clockDisplay.writeDisplay();
 }
