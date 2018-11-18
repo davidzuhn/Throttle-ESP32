@@ -39,6 +39,7 @@ ThrottleController controller;
 
 void setup() {
     Serial.begin(115200);
+    BLEDevice::init("T");
 
     controller.begin();
 }

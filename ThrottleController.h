@@ -4,7 +4,7 @@
 #include <string>
 
 
-#include <Arduino.h>
+#include "Arduino.h"
 
 #include <Chrono.h>
 #include <Time.h>
@@ -19,7 +19,9 @@
 #include <SparkFunSX1509.h>
 
 #include "WiThrottle.h"
+#include "WifiInfo.h"
 #include "RGBLED.h"
+#include "PilotLight.h"
 
 
 
@@ -58,9 +60,6 @@ class ThrottleController: public WiThrottleDelegate
     void wifiOnDisconnect();
     void wifiEvent(WiFiEvent_t event);
 
-
-
-
   private:
     Direction directionFromTogglePosition(TogglePosition position);
     void readButton(int intrStatus, int buttonPin, int funcNum, const char *name);
@@ -79,6 +78,7 @@ class ThrottleController: public WiThrottleDelegate
     Adafruit_7segment clockDisplay;
     SX1509RGBLED statusLED;
     SX1509 sx1509;
+    PilotLight pilotLight;
     WiThrottle wiThrottle;
 
     TogglePosition previousTogglePosition;
@@ -101,5 +101,7 @@ class ThrottleController: public WiThrottleDelegate
     std::string host;
     int port;
 
+    WifiInfo wifiInfo;
+    BLEServer *bleServer;
 
 };

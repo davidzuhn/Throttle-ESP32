@@ -59,6 +59,7 @@ ThrottleController::ThrottleController():
     client(),
     clockDisplay(),
     sx1509(),
+    pilotLight(),
     statusLED(sx1509, RGB_RED, RGB_GREEN, RGB_BLUE),
     wiThrottle(),
     previousTogglePosition(Unknown),
@@ -70,8 +71,12 @@ ThrottleController::ThrottleController():
     ssid(WIFI_SSID),
     password(WIFI_PASSWORD),
     host(JMRI_SERVER_ADDRESS),
-    port(12090)
+    port(12090),
+    wifiInfo(),
+    bleServer(NULL)
 {
+    Serial.print("ThrottleController constructed");
+
 }
 
 
@@ -85,6 +90,7 @@ ThrottleController::sx1509_isr()
 void
 ThrottleController::setupSX1509()
 {
+  pilotLight.begin(21);
   statusLED.begin();
 
   // The SX1509 has built-in debounce features, so a single button-press
@@ -121,7 +127,7 @@ ThrottleController::setupSX1509()
 bool
 ThrottleController::begin()
 {
-
+  bleServer = BLEDevice::createServer();
   clockDisplay.begin(DISPLAY_ADDRESS);
   clockDisplay.clear();
 
@@ -145,7 +151,13 @@ ThrottleController::begin()
 
   analogReadResolution(12);   // 0-4095, no matter what the hardware support
 
+  wifiInfo.begin(bleServer);
+
+
+
   wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
+
+  Serial.println("ThrottleController.begin complete");
 }
 
 
@@ -303,6 +315,8 @@ ThrottleController::loop()
     statusLED.setThrottleConnected();
 
     while (true) {
+        pilotLight.check();
+
         if (wiThrottle.check()) {
             if (wiThrottle.clockChanged) {
                 updateFastTimeDisplay();
