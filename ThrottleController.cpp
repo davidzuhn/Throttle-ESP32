@@ -156,6 +156,7 @@ ThrottleController::begin()
 
 
   wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
+  wifiInfo.delegate = this;      // appropriate callbacks for BLE Wifi info
 
   Serial.println("ThrottleController.begin complete");
 }
@@ -397,30 +398,36 @@ ThrottleController::receivedVersion(String version)
 void
 ThrottleController::receivedFunctionState(uint8_t func, bool state)
 {
+    int pin = -1;
     state = !state;;   // inverted outputs
 
     // TODO: these mappings should be part of user-controllable configuration
     switch(func) {
         case 0:
-            sx1509.digitalWrite(5, state);
+            pin = 5;
             break;
         case 1:
-            sx1509.digitalWrite(4, state);
+            pin = 4;
             break;
         case 2:
-            sx1509.digitalWrite(3, state);
+            pin = 3;
             break;
         case 3:
-            sx1509.digitalWrite(2, state);
+            pin = 2;
             break;
         case 4:
-            sx1509.digitalWrite(1, state);
+            pin = 1;
             break;
         case 9:
-            sx1509.digitalWrite(6, state);
+            pin = 6;
             break;
         default:
             break;
+    }
+
+    if (pin != -1) {
+        Serial.printf("setting LED %d to %d\n", pin, state);
+        sx1509.digitalWrite(pin, state);
     }
 }
 
@@ -493,6 +500,7 @@ ThrottleController::readButtons()
 {
   unsigned int intrStatus = sx1509.interruptSource();
   // For debugging handiness, print the intStatus variable.
+  Serial.print("button interrupt: "); Serial.print(intrStatus, BIN); Serial.println("");
 
   // Each bit in intStatus represents a single SX1509 I/O.  Check all thet
   // we know about each time we get notified of a change.
@@ -626,4 +634,16 @@ ThrottleController::wifiEvent(WiFiEvent_t event) {
     default:
       break;
   }
+}
+
+
+void
+ThrottleController::wifiCommandReceived(std::string command)
+{
+    Serial.print("wifi command received "); Serial.print(command.c_str()); Serial.println("");
+
+    Serial.print("  ssid: "); Serial.println(wifiInfo.ssid.c_str());
+    Serial.print("  password: "); Serial.println(wifiInfo.password.c_str());
+    Serial.print("  server: "); Serial.println(wifiInfo.serverAddress.c_str());
+
 }

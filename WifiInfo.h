@@ -1,3 +1,5 @@
+// -*- c++ -*-
+
 #pragma once
 
 #include "Arduino.h"
@@ -20,7 +22,17 @@
 #define WIFI_STATUS_CHARACTERISTIC_UUID    "426c7565-36e4-4688-b7f5-4b646f626279"
 #define WIFI_COMMAND_CHARACTERISTIC_UUID   "426c7565-36e5-4688-b7f5-4b646f626279"
 
-class WifiInfo : public BLECharacteristicCallbacks
+
+class WifiInfoDelegate
+{
+  public:
+    virtual void wifiCommandReceived(std::string command) { }
+};
+
+
+
+class WifiInfo:
+    public BLECharacteristicCallbacks
 {
   public:
     WifiInfo();
@@ -32,6 +44,8 @@ class WifiInfo : public BLECharacteristicCallbacks
     std::string ssid;
     std::string password;
     std::string serverAddress;
+
+    WifiInfoDelegate *delegate;
 
   private:
     BLEService *wifiService;

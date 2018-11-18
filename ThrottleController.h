@@ -3,7 +3,6 @@
 
 #include <string>
 
-
 #include "Arduino.h"
 
 #include <Chrono.h>
@@ -35,7 +34,9 @@ typedef enum TogglePosition {
 
 
 
-class ThrottleController: public WiThrottleDelegate
+class ThrottleController:
+    public WiThrottleDelegate,
+    public WifiInfoDelegate
 {
   public:
     ThrottleController();
@@ -43,6 +44,8 @@ class ThrottleController: public WiThrottleDelegate
     bool begin();
 
     void loop();
+
+    void wifiCommandReceived(std::string command);
 
     // WiThrottleDelegate methods
     void receivedDirection(Direction dir);
@@ -103,5 +106,4 @@ class ThrottleController: public WiThrottleDelegate
 
     WifiInfo wifiInfo;
     BLEServer *bleServer;
-
 };
