@@ -130,11 +130,13 @@ ThrottleController::begin()
   bleServer = BLEDevice::createServer();
   clockDisplay.begin(DISPLAY_ADDRESS);
   clockDisplay.clear();
+  clockDisplay.writeDisplay();
 
   // Call .begin(<address>) to initialize the SX1509. If it successfully
   // communicates, it'll return true.
   if (!sx1509.begin(SX1509_ADDRESS))
   {
+      Serial.println("no sx1509 found");
       while (1) {
 	  // If we fail to communicate, loop forever.
       }
@@ -281,6 +283,7 @@ ThrottleController::loop()
     String selectedAddress = "S21";
 
     clockDisplay.clear();
+    clockDisplay.writeDisplay();
 
     // BLE is not connected at this time, nor is WiFI
     statusLED.setWifiDisconnected();
@@ -300,8 +303,9 @@ ThrottleController::loop()
     statusLED.setWifiConnected();
 
     while (! client.connected()) {
+	pilotLight.check();
         if (!client.connect(host.c_str(), port)) {
-            Serial.printf("connection to %s:%d failed", host.c_str(), port);
+            Serial.printf("connection to %s:%d failed\n", host.c_str(), port);
         }
         else {
             Serial.println("connected succeeded");

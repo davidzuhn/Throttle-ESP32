@@ -60,7 +60,6 @@ WifiInfo::begin(BLEServer *bleServer)
             advertisements = bleServer->getAdvertising();
 
             advertisements->addServiceUUID(wifiService->getUUID());
-            //advertisements->addServiceUUID((uint16_t) 0xFEED);
             advertisements->start();
             Serial.println("BLE advertising started");
         }
