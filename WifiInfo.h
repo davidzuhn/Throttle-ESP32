@@ -7,13 +7,11 @@
 #include <string>
 #include <iostream>
 
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_LEDBackpack.h>
-
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+
+#include "ThrottleData.h"
 
 #define WIFI_SERVICE_UUID                  "426c7565-3600-4688-b7f5-4b646f626279"
 #define WIFI_SSID_CHARACTERISTIC_UUID      "426c7565-36e1-4688-b7f5-4b646f626279"
@@ -35,19 +33,21 @@ class WifiInfo:
     public BLECharacteristicCallbacks
 {
   public:
-    WifiInfo();
+    WifiInfo(ThrottleData& flashData);
     void begin(BLEServer *bleServer);
 
     void onWrite(BLECharacteristic *characteristic);
     void onRead(BLECharacteristic *characteristic);
+    void setConnectionState(std::string state);
 
-    std::string ssid;
-    std::string password;
-    std::string serverAddress;
 
     WifiInfoDelegate *delegate;
 
   private:
+    std::string ssid;
+    std::string password;
+    std::string serverAddress;
+
     BLEService *wifiService;
     BLECharacteristic *ssidCharacteristic;
     BLECharacteristic *passwordCharacteristic;
@@ -56,4 +56,7 @@ class WifiInfo:
     BLECharacteristic *commandCharacteristic;
 
     BLEAdvertising *advertisements;
+
+    ThrottleData& flashData;
+    std::string connectionState;
 };
