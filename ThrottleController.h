@@ -15,6 +15,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_LEDBackpack.h>
 
+#include <Adafruit_LIS3DH.h>
+#include <Adafruit_Sensor.h>
+
 #include <SparkFunSX1509.h>
 
 #include "WiThrottle.h"
@@ -22,7 +25,11 @@
 #include "RGBLED.h"
 #include "PilotLight.h"
 
+#include "ThrottleData.h"
+#include "BLEThrottle.h"
 
+
+#define ADAFRUIT_ALPHANUM 1
 
 
 typedef enum TogglePosition {
@@ -39,7 +46,7 @@ class ThrottleController:
     public WifiInfoDelegate
 {
   public:
-    ThrottleController();
+    ThrottleController(ThrottleData& flashData);
 
     bool begin();
 
@@ -76,9 +83,20 @@ class ThrottleController:
     void sx1509_isr();
     void updateFastTimeDisplay();
 
+    void accel_isr();
+    void setupAccelerometer();
+    void readAccelerometer();
 
     WiFiClient client;
+
+#if !ADAFRUIT_ALPHANUM
     Adafruit_7segment clockDisplay;
+#else
+    Adafruit_AlphaNum4 clockDisplay;
+#endif
+
+    Adafruit_LIS3DH accel;
+
     SX1509RGBLED statusLED;
     SX1509 sx1509;
     PilotLight pilotLight;
@@ -93,17 +111,25 @@ class ThrottleController:
     int penultimateSpeedValue;
 
     bool handleSX1509Interrupt;
+    bool handleAccelInterrupt;
+    int accelIntrValue;
 
+    Chrono accelerometerCheck;
     Chrono speedPotRead;
     Chrono speedCheck;
 
+
     bool wifiConnected;
 
-    std::string ssid;
-    std::string password;
-    std::string host;
     int port;
 
     WifiInfo wifiInfo;
+
+    BLEThrottle throttleInfo;
+
     BLEServer *bleServer;
+
+    ThrottleData& flashData;
+
+    bool restartWifiOnNextCycle;
 };

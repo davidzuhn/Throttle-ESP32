@@ -13,15 +13,24 @@
 #define SX1509_OFF (1)
 #define SX1509_ON  (0)
 
-// I2C address of the display.  Stick with the default address of 0x70
-// unless you've changed the address jumpers on the back of the display.
+// I2C address of the 7 segment display.  Stick with the default address of
+// 0x70 unless you've changed the address jumpers on the back of the
+// display.
 #define DISPLAY_ADDRESS   (0x70)
+
+// I2C address of the 14 segment display.  Stick with the default address of
+// 0x70 unless you've changed the address jumpers on the back of the
+// display.
+#define ALPHANUM_DISPLAY_ADDRESS (0x72)
 
 // I2C address of the SX1509 GPIO expander.
 #define SX1509_ADDRESS  (0x3E)
 
 // the INTR output pin of the SX1509 is attached to this pin on the ESP32
-#define SX1509_INTR_PIN (A10)
+#define SX1509_INTR_PIN (A10)  // ESP32 #27
+
+
+#define ACCEL_INTR_PIN (A3)  // ESP32 #39
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -31,6 +40,9 @@
 #define RGB_RED (15)
 #define RGB_GREEN (14)
 #define RGB_BLUE (13)
+
+#if 0
+#error OLD BOARD
 #define BUTTON1 (9)
 #define BUTTON2 (10)
 #define BUTTON3 (11)
@@ -45,6 +57,40 @@
 #define LED5 (4)
 #define LED6 (5)
 #define LED7 (6)
+#endif
+
+
+
+#if 1
+
+#define BUTTON1 (7)
+#define BUTTON2 (6)
+#define BUTTON3 (5)
+#define BUTTON4 (4)
+#define BUTTON5 (3)
+#define BUTTON6 (2)
+#define BUTTON7 (1)
+#define BUTTON8 (0)
+
+#define BRAKE   (8)
+
+#define LED1    (9)
+
+#endif
+
+
+#if 0
+#define BUTTON1 (8)
+#define BUTTON2 (9)
+#define BUTTON3 (10)
+#define BRAKE   (11)
+
+#define LED1    (7)
+#define LED2    (6)
+#define LED3    (5)
+#define LED4    (4)
+#define LED5    (3)
+#endif
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -55,9 +101,10 @@
 
 using namespace std::placeholders;
 
-ThrottleController::ThrottleController():
+ThrottleController::ThrottleController(ThrottleData& flashData):
     client(),
     clockDisplay(),
+    accel(),
     sx1509(),
     pilotLight(),
     statusLED(sx1509, RGB_RED, RGB_GREEN, RGB_BLUE),
@@ -68,16 +115,61 @@ ThrottleController::ThrottleController():
     previousSpeedValue(-1),
     penultimateSpeedValue(-1),
     handleSX1509Interrupt(false),
-    ssid(WIFI_SSID),
-    password(WIFI_PASSWORD),
-    host(JMRI_SERVER_ADDRESS),
+    handleAccelInterrupt(false),
     port(12090),
-    wifiInfo(),
-    bleServer(NULL)
+    wifiInfo(flashData),
+    bleServer(NULL),
+    flashData(flashData),
+    restartWifiOnNextCycle(false)
 {
     Serial.print("ThrottleController constructed");
-
 }
+
+
+void
+ThrottleController::accel_isr()
+{
+    handleAccelInterrupt = true;
+    accelIntrValue = digitalRead(ACCEL_INTR_PIN);
+}
+
+void
+ThrottleController::setupAccelerometer()
+{
+    attachInterrupt(ACCEL_INTR_PIN, std::bind(&ThrottleController::accel_isr, this), CHANGE);
+
+    Serial.println("accelerometer initialized");
+}
+
+
+void
+ThrottleController::readAccelerometer()
+{
+    const float ACCEL_DELTA = 0.75;
+    static float last_x, last_y, last_z = 0;
+    accel.read();
+
+    sensors_event_t event;
+    accel.getEvent(&event);
+
+    float dx, dy, dz;
+    dx = fabs(event.acceleration.x - last_x);
+    dy = fabs(event.acceleration.y - last_y);
+    dz = fabs(event.acceleration.z - last_z);
+
+    if ((dx > ACCEL_DELTA) || (dy > ACCEL_DELTA) || (dz > ACCEL_DELTA)) {
+        /* Display the results (acceleration is measured in m/s^2) */
+        Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
+        Serial.print(" \tY: "); Serial.print(event.acceleration.y);
+        Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
+        Serial.println(" m/s^2 ");
+
+        last_x = event.acceleration.x;
+        last_y = event.acceleration.y;
+        last_z = event.acceleration.z;
+    }
+}
+
 
 
 void
@@ -90,46 +182,97 @@ ThrottleController::sx1509_isr()
 void
 ThrottleController::setupSX1509()
 {
-  pilotLight.begin(21);
-  statusLED.begin();
+    pilotLight.begin(21);
+    statusLED.begin();
 
-  // The SX1509 has built-in debounce features, so a single button-press
-  // doesn't accidentally create multiple ints.  Use
-  // .debounceTime(<time_ms>) to set the GLOBAL SX1509 debounce time.
-  //
-  // <time_ms> can be either 0, 1, 2, 4, 8, 16, 32, or 64 ms.
-  sx1509.debounceTime(16);
+    // The SX1509 has built-in debounce features, so a single button-press
+    // doesn't accidentally create multiple ints.  Use
+    // .debounceTime(<time_ms>) to set the GLOBAL SX1509 debounce time.
+    //
+    // <time_ms> can be either 0, 1, 2, 4, 8, 16, 32, or 64 ms.
+    sx1509.debounceTime(16);
 
-  setupButtonPin(BRAKE);
-  setupButtonPin(BUTTON1);
-  setupButtonPin(BUTTON2);
-  setupButtonPin(BUTTON3);
-  setupButtonPin(BUTTON4);
-  setupButtonPin(BUTTON5);
+#ifdef BRAKE
+    setupButtonPin(BRAKE);
+#endif
+#ifdef BUTTON1
+    setupButtonPin(BUTTON1);
+#endif
+#ifdef BUTTON2
+    setupButtonPin(BUTTON2);
+#endif
+#ifdef BUTTON3
+    setupButtonPin(BUTTON3);
+#endif
+#ifdef BUTTON4
+    setupButtonPin(BUTTON4);
+#endif
+#ifdef BUTTON5
+    setupButtonPin(BUTTON5);
+#endif
+#ifdef BUTTON6
+    setupButtonPin(BUTTON6);
+#endif
+#ifdef BUTTON7
+    setupButtonPin(BUTTON7);
+#endif
+#ifdef BUTTON8
+    setupButtonPin(BUTTON8);
+#endif
 
-  setupLEDPin(LED1);
-  setupLEDPin(LED2);
-  setupLEDPin(LED3);
-  setupLEDPin(LED4);
-  setupLEDPin(LED5);
-  setupLEDPin(LED6);
-  setupLEDPin(LED7);
+#ifdef LED1
+    setupLEDPin(LED1);
+    Serial.println("LED1 setup");
+#endif
+#ifdef LED2
+    setupLEDPin(LED2);
+#endif
+#ifdef LED3
+    setupLEDPin(LED3);
+#endif
+#ifdef LED4
+    setupLEDPin(LED4);
+#endif
+#ifdef LED5
+    setupLEDPin(LED5);
+#endif
+#ifdef LED6
+    setupLEDPin(LED6);
+#endif
+#ifdef LED7
+    setupLEDPin(LED7);
+#endif
 
+    // Attach an Arduino interrupt to the interrupt pin. Call the ISR
+    // function, whenever the pin goes from HIGH to LOW.
+    attachInterrupt(SX1509_INTR_PIN, std::bind(&ThrottleController::sx1509_isr, this), FALLING);
 
-  // Attach an Arduino interrupt to the interrupt pin. Call the ISR
-  // function, whenever the pin goes from HIGH to LOW.
-  attachInterrupt(SX1509_INTR_PIN, std::bind(&ThrottleController::sx1509_isr, this), FALLING);
-
-  Serial.println("SX1509 initialized");
+    Serial.println("SX1509 initialized");
 }
 
 
 bool
 ThrottleController::begin()
 {
+    if (! accel.begin(0x18)) {
+        Serial.printf("Unable to initialize accelerometer at 0x18\n");
+
+        accel.setRange(LIS3DH_RANGE_4_G);
+    }
+
+
   bleServer = BLEDevice::createServer();
-  clockDisplay.begin(DISPLAY_ADDRESS);
+#if ADAFRUIT_ALPHANUM
+  clockDisplay.begin(ALPHANUM_DISPLAY_ADDRESS);
   clockDisplay.clear();
+  clockDisplay.writeDigitAscii(0, '0');
+  clockDisplay.writeDigitAscii(1, '0');
+  clockDisplay.writeDigitAscii(2, '0');
+  clockDisplay.writeDigitAscii(3, '0');
+#else
+  clockDisplay.begin(DISPLAY_ADDRESS);#
+  clockDisplay.clear();
+#endif
   clockDisplay.writeDisplay();
 
   // Call .begin(<address>) to initialize the SX1509. If it successfully
@@ -146,7 +289,7 @@ ThrottleController::begin()
 
   setupSX1509();
 
-
+  setupAccelerometer();
 
   pinMode(DIR_LEFT, INPUT_PULLUP);
   pinMode(DIR_RIGHT, INPUT_PULLUP);
@@ -154,8 +297,7 @@ ThrottleController::begin()
   analogReadResolution(12);   // 0-4095, no matter what the hardware support
 
   wifiInfo.begin(bleServer);
-
-
+  throttleInfo.begin(bleServer);
 
   wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
   wifiInfo.delegate = this;      // appropriate callbacks for BLE Wifi info
@@ -253,12 +395,14 @@ ThrottleController::readSpeed()
 
       if (d != lastDirection) {
         wiThrottle.setDirection(d);
+        throttleInfo.setDirection(d);
         lastDirection = d;
       }
 
     }
     if (speedChanged) {
       wiThrottle.setSpeed(speedValue);
+      throttleInfo.setSpeed(speedValue);
     }
   }
 
@@ -280,35 +424,54 @@ ThrottleController::loop()
 {
     bool addressSelected = false;
     bool nameSent = false;
-    String selectedAddress = "S21";
+    String selectedAddress = "S23";
 
-    clockDisplay.clear();
-    clockDisplay.writeDisplay();
+
+    delay(10000);
+
+//    clockDisplay.clear();
+//    clockDisplay.writeDisplay();
 
     // BLE is not connected at this time, nor is WiFI
     statusLED.setWifiDisconnected();
+    wifiInfo.setConnectionState("WIFI_DISCONNECTED");
+
+    Serial.println("wifi is disconnected");
 
     WiFi.disconnect();
     WiFi.onEvent(std::bind(&ThrottleController::wifiEvent, this, _1));
     WiFi.mode(WIFI_MODE_STA);
 
+    std::string ssid = flashData.getWifiSSID();
+    std::string password = flashData.getWifiPassword();
+
+    Serial.printf("Connecting to Wifi SSID:'%s' Password:'%s'\n", ssid.c_str(), password.c_str());
+
     WiFi.begin(ssid.c_str(), password.c_str());
 
     while (WiFi.status() != WL_CONNECTED) {
+        static int retryCount = 0;
         delay(500);
-        Serial.print(".");
+        Serial.println("retry wifi connection");
+        if ((retryCount++ % 65) == 0) {
+            Serial.println("");
+        }
     }
 
     // light blue when connected to WiThrottle server
     statusLED.setWifiConnected();
+    wifiInfo.setConnectionState("WIFI_CONNECTED");
+
+    Serial.println("wifi connected");
 
     while (! client.connected()) {
 	pilotLight.check();
+        std::string host = flashData.getServerAddress();
         if (!client.connect(host.c_str(), port)) {
             Serial.printf("connection to %s:%d failed\n", host.c_str(), port);
         }
         else {
-            Serial.println("connected succeeded");
+            Serial.println("connection succeeded");
             client.setNoDelay(true); // disable Nagle & packet coalescing
             wiThrottle.connect(&client);
         }
@@ -318,6 +481,7 @@ ThrottleController::loop()
 
     // bright blue when connected to WiThrottle server
     statusLED.setThrottleConnected();
+    wifiInfo.setConnectionState("WITHROTTLE_CONNECTED");
 
     while (true) {
         pilotLight.check();
@@ -331,6 +495,7 @@ ThrottleController::loop()
             }
             if (! client.connected()) {
                 statusLED.setWifiDisconnected();
+                wifiInfo.setConnectionState("WIFI_DISCONNECTED");
                 wiThrottle.disconnect();
                 Serial.println("Network Disconnected");
                 return;
@@ -339,6 +504,14 @@ ThrottleController::loop()
             if (handleSX1509Interrupt) {
                 readButtons();
                 handleSX1509Interrupt = false;
+            }
+
+            if (handleAccelInterrupt) {
+                Serial.printf("ACCEL CHANGE: now %d\n", accelIntrValue);
+            }
+
+            if (accelerometerCheck.hasPassed(1000/5)) {
+                readAccelerometer();
             }
 
 #if 1
@@ -365,10 +538,14 @@ ThrottleController::loop()
                 readSpeed();
             }
         }
+
+        if (restartWifiOnNextCycle) {
+            break;
+        }
     }
 
 
-
+    restartWifiOnNextCycle = false;
 
 }
 
@@ -376,6 +553,7 @@ ThrottleController::loop()
 void
 ThrottleController::setupButtonPin(int pin)
 {
+    Serial.print("setup BUTTON on pin "); Serial.println(pin);
     sx1509.pinMode(pin, INPUT_PULLUP);
     sx1509.enableInterrupt(pin, CHANGE);
     sx1509.debouncePin(pin);
@@ -512,11 +690,30 @@ ThrottleController::readButtons()
   // TODO: put the buttons into a map (name:pin)
   readButton(intrStatus, BRAKE,   9, "BRAKE");
 
+#ifdef BUTTON1
   readButton(intrStatus, BUTTON1, 0, "BUTTON1");
+#endif
+#ifdef BUTTON2
   readButton(intrStatus, BUTTON2, 1, "BUTTON2");
+#endif
+#ifdef BUTTON3
   readButton(intrStatus, BUTTON3, 2, "BUTTON3");
+#endif
+#ifdef BUTTON4
   readButton(intrStatus, BUTTON4, 3, "BUTTON4");
+#endif
+#ifdef BUTTON5
   readButton(intrStatus, BUTTON5, 4, "BUTTON5");
+#endif
+#ifdef BUTTON6
+  readButton(intrStatus, BUTTON6, 5, "BUTTON6");
+#endif
+#ifdef BUTTON7
+  readButton(intrStatus, BUTTON7, 6, "BUTTON7");
+#endif
+#ifdef BUTTON8
+  readButton(intrStatus, BUTTON8, 7, "BUTTON8");
+#endif
 }
 
 
@@ -547,14 +744,20 @@ void ThrottleController::updateFastTimeDisplay()
         displayValue += 1200;
     }
 
+
+    blinkColon = !blinkColon;
+
+#if ! ADAFRUIT_ALPHANUM
     // Now print the time value to the display.
     clockDisplay.print(displayValue, DEC);
 
     // Blink the colon by flipping its value every loop iteration
     // (which happens every second).
-    blinkColon = !blinkColon;
     clockDisplay.drawColon(blinkColon);
+#endif
+#ifdef LED1
     sx1509.digitalWrite(LED1, blinkColon ? SX1509_ON : SX1509_OFF);
+#endif
 
     clockDisplay.writeDisplay();
 }
@@ -606,7 +809,7 @@ ThrottleController::wifiOnConnect() {
   Serial.println(WiFi.localIP());
 
   Serial.print("connecting to ");
-  Serial.println(host.c_str());
+  Serial.println(flashData.getServerAddress().c_str());
 }
 
 void
@@ -614,6 +817,7 @@ ThrottleController::wifiOnDisconnect() {
   client.stop();
   wiThrottle.disconnect();
   statusLED.setWifiDisconnected();
+  wifiInfo.setConnectionState("WIFI_DISCONNECTED");
   Serial.println("STA Disconnected");
 }
 
@@ -646,8 +850,9 @@ ThrottleController::wifiCommandReceived(std::string command)
 {
     Serial.print("wifi command received "); Serial.print(command.c_str()); Serial.println("");
 
-    Serial.print("  ssid: "); Serial.println(wifiInfo.ssid.c_str());
-    Serial.print("  password: "); Serial.println(wifiInfo.password.c_str());
-    Serial.print("  server: "); Serial.println(wifiInfo.serverAddress.c_str());
+    Serial.print("  ssid: "); Serial.println(flashData.getWifiSSID().c_str());
+    Serial.print("  password: "); Serial.println(flashData.getWifiPassword().c_str());
+    Serial.print("  server: "); Serial.println(flashData.getServerAddress().c_str());
 
+    restartWifiOnNextCycle = true;
 }
