@@ -2,101 +2,9 @@
 
 #include <FunctionalInterrupt.h>
 
-
-// TODO: these need to be modifiable via a BLE interface
-#define WIFI_SSID     "myownlittleidaho"
-#define WIFI_PASSWORD "goslowdown"
-#define JMRI_SERVER_ADDRESS "192.168.22.20"
+#include "BSP.h"
 
 
-// LEDs are in an active-low configuration
-#define SX1509_OFF (1)
-#define SX1509_ON  (0)
-
-// I2C address of the 7 segment display.  Stick with the default address of
-// 0x70 unless you've changed the address jumpers on the back of the
-// display.
-#define DISPLAY_ADDRESS   (0x70)
-
-// I2C address of the 14 segment display.  Stick with the default address of
-// 0x70 unless you've changed the address jumpers on the back of the
-// display.
-#define ALPHANUM_DISPLAY_ADDRESS (0x72)
-
-// I2C address of the SX1509 GPIO expander.
-#define SX1509_ADDRESS  (0x3E)
-
-// the INTR output pin of the SX1509 is attached to this pin on the ESP32
-#define SX1509_INTR_PIN (A10)  // ESP32 #27
-
-
-#define ACCEL_INTR_PIN (A3)  // ESP32 #39
-
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// These are pin numbers on the SX1509 GPIO extender
-//
-#define RGB_RED (15)
-#define RGB_GREEN (14)
-#define RGB_BLUE (13)
-
-#if 0
-#error OLD BOARD
-#define BUTTON1 (9)
-#define BUTTON2 (10)
-#define BUTTON3 (11)
-#define BUTTON4 (12)
-#define BUTTON5 (7)
-#define BRAKE (8)
-
-#define LED1 (0)
-#define LED2 (1)
-#define LED3 (2)
-#define LED4 (3)
-#define LED5 (4)
-#define LED6 (5)
-#define LED7 (6)
-#endif
-
-
-
-#if 1
-
-#define BUTTON1 (7)
-#define BUTTON2 (6)
-#define BUTTON3 (5)
-#define BUTTON4 (4)
-#define BUTTON5 (3)
-#define BUTTON6 (2)
-#define BUTTON7 (1)
-#define BUTTON8 (0)
-
-#define BRAKE   (8)
-
-#define LED1    (9)
-
-#endif
-
-
-#if 0
-#define BUTTON1 (8)
-#define BUTTON2 (9)
-#define BUTTON3 (10)
-#define BRAKE   (11)
-
-#define LED1    (7)
-#define LED2    (6)
-#define LED3    (5)
-#define LED4    (4)
-#define LED5    (3)
-#endif
-//
-////////////////////////////////////////////////////////////////////////////////
-
-#define SPEED_KNOB (A4)
-#define DIR_LEFT (15)
-#define DIR_RIGHT (33)
 
 
 using namespace std::placeholders;
@@ -254,7 +162,7 @@ ThrottleController::setupSX1509()
 bool
 ThrottleController::begin()
 {
-    if (! accel.begin(0x18)) {
+    if (! accel.begin(ACCEL_I2C_ADDRESS)) {
         Serial.printf("Unable to initialize accelerometer at 0x18\n");
 
         accel.setRange(LIS3DH_RANGE_4_G);
@@ -277,7 +185,7 @@ ThrottleController::begin()
 
   // Call .begin(<address>) to initialize the SX1509. If it successfully
   // communicates, it'll return true.
-  if (!sx1509.begin(SX1509_ADDRESS))
+  if (!sx1509.begin(SX1509_I2C_ADDRESS))
   {
       Serial.println("no sx1509 found");
       while (1) {
@@ -850,9 +758,9 @@ ThrottleController::wifiCommandReceived(std::string command)
 {
     Serial.print("wifi command received "); Serial.print(command.c_str()); Serial.println("");
 
-    Serial.print("  ssid: "); Serial.println(flashData.getWifiSSID().c_str());
-    Serial.print("  password: "); Serial.println(flashData.getWifiPassword().c_str());
-    Serial.print("  server: "); Serial.println(flashData.getServerAddress().c_str());
+    Serial.printf("  ssid: '%s'\n", flashData.getWifiSSID().c_str());
+    Serial.printf("  password: '%s'\n", flashData.getWifiPassword().c_str());
+    Serial.printf("  server: '%s'\n", flashData.getServerAddress().c_str());
 
     restartWifiOnNextCycle = true;
 }
