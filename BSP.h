@@ -13,7 +13,7 @@ extern "C" {
 // I2C address of the 14 segment display.  Stick with the default address of
 // 0x70 unless you've changed the address jumpers on the back of the
 // display.
-#define ALPHANUM_DISPLAY_ADDRESS (0x77)
+#define ALPHANUM_DISPLAY_ADDRESS (0x77)   // NOTE: jumpers soldered to change address
 
 // I2C address of the SX1509 GPIO expander.
 #define SX1509_I2C_ADDRESS       (0x3E)
