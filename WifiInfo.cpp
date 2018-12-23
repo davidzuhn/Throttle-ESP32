@@ -7,6 +7,7 @@ WifiInfo::WifiInfo(ThrottleData& flashData):
     ssid(),
     password(),
     serverAddress(),
+    serverPort(),
     connectionState("DISCONNECTED"),
     delegate(NULL),
     advertisements(NULL),
@@ -45,6 +46,12 @@ WifiInfo::begin(BLEServer *bleServer)
             //serverCharacteristic->addDescriptor(&stringTypeDescriptor);
             serverCharacteristic->setCallbacks(this);
 
+            portCharacteristic = wifiService->createCharacteristic(WIFI_PORT_CHARACTERISTIC_UUID,
+                                                                     BLECharacteristic::PROPERTY_READ
+                                                                     | BLECharacteristic::PROPERTY_WRITE);
+            //serverCharacteristic->addDescriptor(&stringTypeDescriptor);
+            portCharacteristic->setCallbacks(this);
+
 
             statusCharacteristic = wifiService->createCharacteristic(WIFI_STATUS_CHARACTERISTIC_UUID,
                                                                      BLECharacteristic::PROPERTY_READ
@@ -54,6 +61,13 @@ WifiInfo::begin(BLEServer *bleServer)
             commandCharacteristic = wifiService->createCharacteristic(WIFI_COMMAND_CHARACTERISTIC_UUID,
                                                                       BLECharacteristic::PROPERTY_WRITE);
             commandCharacteristic->setCallbacks(this);
+
+
+            deviceNameCharacteristic = wifiService->createCharacteristic(DEVICE_NAME_CHARACTERISTIC_UUID,
+                                                                         BLECharacteristic::PROPERTY_READ
+                                                                         | BLECharacteristic::PROPERTY_WRITE);
+            deviceNameCharacteristic->setCallbacks(this);
+
 
 
             wifiService->start();
@@ -97,7 +111,13 @@ WifiInfo::onWrite(BLECharacteristic *characteristic)
     if (characteristic->getUUID().equals(BLEUUID(WIFI_SERVER_CHARACTERISTIC_UUID))) {
         serverAddress = characteristic->getValue();
         flashData.saveServerAddress(serverAddress);
-        Serial.print("write for server "); Serial.println(characteristic->getValue().c_str());
+        Serial.print("write for server address "); Serial.println(characteristic->getValue().c_str());
+    }
+    else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_PORT_CHARACTERISTIC_UUID))) {
+        serverPort = characteristic->getValue();
+        flashData.saveServerPort(serverPort);
+        Serial.print("write for server port "); Serial.println(characteristic->getValue().c_str());
     }
     else
     if (characteristic->getUUID().equals(BLEUUID(WIFI_COMMAND_CHARACTERISTIC_UUID))) {
@@ -105,6 +125,12 @@ WifiInfo::onWrite(BLECharacteristic *characteristic)
         if (delegate) {
             delegate->wifiCommandReceived(characteristic->getValue());
         }
+    }
+    else
+    if (characteristic->getUUID().equals(BLEUUID(DEVICE_NAME_CHARACTERISTIC_UUID))) {
+        auto deviceName = characteristic->getValue();
+        flashData.saveDeviceName(deviceName);
+        Serial.print("write for device name "); Serial.println(characteristic->getValue().c_str());
     }
     else {
         Serial.printf("received write for unknown UUID: %s\n", characteristic->getUUID().toString());
@@ -133,11 +159,18 @@ WifiInfo::onRead(BLECharacteristic *characteristic)
         characteristic->setValue(serverAddress);
     }
     else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_PORT_CHARACTERISTIC_UUID))) {
+        auto serverPort = flashData.getServerPort();
+        characteristic->setValue(serverPort);
+    }
+    else
     if (characteristic->getUUID().equals(BLEUUID(WIFI_STATUS_CHARACTERISTIC_UUID))) {
         characteristic->setValue(connectionState);
-
     }
-
+    else
+    if (characteristic->getUUID().equals(BLEUUID(DEVICE_NAME_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(flashData.getDeviceName());
+    }
 }
 
 

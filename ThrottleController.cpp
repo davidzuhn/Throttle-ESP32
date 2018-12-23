@@ -422,13 +422,10 @@ ThrottleController::loop()
                 readAccelerometer();
             }
 
-#if 1
             if (!nameSent) {
-                wiThrottle.setDeviceName("mylittlethrottle");
+                wiThrottle.setDeviceName(flashData.getDeviceName().c_str());
                 nameSent = true;
             }
-#endif
-
 
 #if 1
             if (!addressSelected) {
@@ -716,8 +713,9 @@ ThrottleController::wifiOnConnect() {
   Serial.print("STA IPv4: ");
   Serial.println(WiFi.localIP());
 
-  Serial.print("connecting to ");
-  Serial.println(flashData.getServerAddress().c_str());
+  Serial.printf("connecting to %s:%s\n",
+                flashData.getServerAddress().c_str(),
+                flashData.getServerPort().c_str());
 }
 
 void
@@ -760,7 +758,7 @@ ThrottleController::wifiCommandReceived(std::string command)
 
     Serial.printf("  ssid: '%s'\n", flashData.getWifiSSID().c_str());
     Serial.printf("  password: '%s'\n", flashData.getWifiPassword().c_str());
-    Serial.printf("  server: '%s'\n", flashData.getServerAddress().c_str());
+    Serial.printf("  server: '%s:%s'\n", flashData.getServerAddress().c_str(), flashData.getServerPort().c_str());
 
     restartWifiOnNextCycle = true;
 }

@@ -12,7 +12,8 @@
 #define DEVICE_NAME_FILE "/deviceName"
 #define SSID_FILE "/ssid"
 #define PASSWORD_FILE "/password"
-#define SERVER_FILE "/server"
+#define SERVER_ADDRESS_FILE "/server"
+#define SERVER_PORT_FILE "/serverPort"
 
 ThrottleData::ThrottleData()
 {
@@ -79,7 +80,7 @@ readFile(std::string filename, std::string defaultContent)
 
 
 
-
+////////////////////////////////////////////////////////////////////////////////
 
 std::string
 ThrottleData::getDeviceName()
@@ -94,6 +95,8 @@ ThrottleData::saveDeviceName(std::string deviceName)
     writeFile(DEVICE_NAME_FILE, deviceName);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 std::string ThrottleData::getWifiSSID()
 {
     std::string ssid = readFile(SSID_FILE, "SSID");
@@ -104,6 +107,8 @@ void ThrottleData::saveWifiSSID(std::string ssid)
 {
     writeFile(SSID_FILE, ssid);
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 std::string
 ThrottleData::getWifiPassword()
@@ -118,15 +123,32 @@ ThrottleData::saveWifiPassword(std::string password)
     writeFile(PASSWORD_FILE, password);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 std::string
 ThrottleData::getServerAddress()
 {
-    std::string server = readFile(SERVER_FILE, "Server");
+    std::string server = readFile(SERVER_ADDRESS_FILE, "Server");
     return server;
 }
 
 void
 ThrottleData::saveServerAddress(std::string server)
 {
-    writeFile(SERVER_FILE, server);
+    writeFile(SERVER_ADDRESS_FILE, server);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string
+ThrottleData::getServerPort()
+{
+    std::string server = readFile(SERVER_PORT_FILE, "12090");
+    return server;
+}
+
+void
+ThrottleData::saveServerPort(std::string serverPort)
+{
+    writeFile(SERVER_PORT_FILE, serverPort);
 }

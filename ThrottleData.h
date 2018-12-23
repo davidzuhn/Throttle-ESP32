@@ -27,6 +27,9 @@ class ThrottleData
     std::string getServerAddress();
     void saveServerAddress(std::string);
 
+    std::string getServerPort();
+    void saveServerPort(std::string);
+
   private:
     std::string getFileContent(std::string path);
     bool saveContentToFile(std::string data, std::string path);

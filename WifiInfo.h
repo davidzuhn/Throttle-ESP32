@@ -19,6 +19,9 @@
 #define WIFI_SERVER_CHARACTERISTIC_UUID    "426c7565-36e3-4688-b7f5-4b646f626279"
 #define WIFI_STATUS_CHARACTERISTIC_UUID    "426c7565-36e4-4688-b7f5-4b646f626279"
 #define WIFI_COMMAND_CHARACTERISTIC_UUID   "426c7565-36e5-4688-b7f5-4b646f626279"
+#define WIFI_PORT_CHARACTERISTIC_UUID      "426c7565-36e6-4688-b7f5-4b646f626279"
+
+#define DEVICE_NAME_CHARACTERISTIC_UUID    "426c7565-36f0-4688-b7f5-4b646f626279"
 
 
 class WifiInfoDelegate
@@ -47,13 +50,17 @@ class WifiInfo:
     std::string ssid;
     std::string password;
     std::string serverAddress;
+    std::string serverPort;
 
     BLEService *wifiService;
     BLECharacteristic *ssidCharacteristic;
     BLECharacteristic *passwordCharacteristic;
     BLECharacteristic *serverCharacteristic;
+    BLECharacteristic *portCharacteristic;
     BLECharacteristic *statusCharacteristic;
     BLECharacteristic *commandCharacteristic;
+
+    BLECharacteristic *deviceNameCharacteristic;
 
     BLEAdvertising *advertisements;
 
