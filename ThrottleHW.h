@@ -40,6 +40,8 @@ class ThrottleHW
     const int LIGHT_OFF = 0;
     const int LIGHT_ON  = 0xFF;
 
+    ThrottleHW() : delegate(NULL) {}
+
     // initialize the HW
     //  return true if the HW is okay, false otherwise
     virtual bool begin() = 0;
