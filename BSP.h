@@ -53,7 +53,12 @@ extern "C" {
 // Basic Pilot Light -- blink under direct ESP32 control
 #define PILOT_LIGHT              (21)
 
+// battery level is read through this pin
+#define BATTERY_LEVEL_PIN        (A13)
 
+// do not report any changes to the current battery level until they exceed this
+// value (in mV)
+#define BATTERY_CHANGE_THRESHOLD   (50)
 
 
 ////////////////////////////////////////////////////////////////////////////////

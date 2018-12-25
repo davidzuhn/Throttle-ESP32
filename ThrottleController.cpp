@@ -196,6 +196,10 @@ ThrottleController::receivedVersion(String version)
 }
 
 
+// this is called by the WiThrottle controller when the notification of a
+// function state change is received.  By changing any externally visble
+// values at this point, we complete a feedback loop (at the expense of a
+// slightly increased latency on the indication change).
 void
 ThrottleController::receivedFunctionState(uint8_t func, bool state)
 {
@@ -422,10 +426,14 @@ ThrottleController::throttleFell()
 void
 ThrottleController::batteryLevelChanged(int batteryLevel)
 {
-    Serial.printf("** Battery Level: %d\n", batteryLevel);
+    // by calling the delegate, the HW controller module has determined
+    // that this batteryLevel is "of interest" and should be reported
+    // to all interested parties
+    Serial.printf(">>> Battery Level: %d\n", batteryLevel);
 }
 
 
+// this is called by the HW module when the function button itself changes state
 void
 ThrottleController::functionButtonChanged(int func, bool pressed)
 {

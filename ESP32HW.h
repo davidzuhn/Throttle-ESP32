@@ -66,6 +66,7 @@ private:
     void               read_speed_potentiometer();
     void               report_speed();
 
+    int                read_battery_level();
     void               report_battery_level();
     void               report_motion();
 

@@ -117,7 +117,6 @@ ESP32HW::setup_gpio()
 
 #ifdef LED1
     setup_led(LED1);
-    Serial.println("LED1 setup");
 #endif
 #ifdef LED2
     setup_led(LED2);
@@ -219,7 +218,7 @@ ESP32HW::read_one_button(int intrStatus, int buttonPin, int funcNum, const char 
 {
   if (intrStatus & (1 << buttonPin)) {
     int pressed = !gpio.digitalRead(buttonPin);
-    Serial.printf("%s %s\n", name, pressed ? "PRESSED" : "RELEASED");
+    //Serial.printf("%s %s\n", name, pressed ? "PRESSED" : "RELEASED");
 
     if (delegate) {
         delegate->functionButtonChanged(funcNum, pressed ? true : false);
@@ -243,7 +242,7 @@ ESP32HW::read_buttons()
 
     unsigned int intrStatus = gpio.interruptSource();
     // For debugging handiness, print the intStatus variable.
-    Serial.print("button interrupt: "); Serial.print(intrStatus, BIN); Serial.println("");
+    //Serial.print("button interrupt: "); Serial.print(intrStatus, BIN); Serial.println("");
 
     // Each bit in intStatus represents a single SX1509 I/O.  Check all thet
     // we know about each time we get notified of a change.
@@ -363,13 +362,32 @@ ESP32HW::report_speed()
     }
 
     if (toggle_position_changed) {
-        Serial.printf("toggle position changed: %d\n", togglePosition);
+        //Serial.printf("toggle position changed: %d\n", togglePosition);
         delegate->togglePositionChanged(togglePosition);
     }
     if (speed_changed) {
-        Serial.printf("speed changed: %d, toggle position: %d\n", speedValue, togglePosition);
+        //Serial.printf("speed changed: %d, toggle position: %d\n", speedValue, togglePosition);
         delegate->speedChanged(speedValue, togglePosition);
     }
+}
+
+
+// return the battery voltage, as reported in mV
+int
+ESP32HW::read_battery_level()
+{
+    int rawBatteryADCLevel = analogRead(BATTERY_LEVEL_PIN);
+
+    // TODO: perform an ADC calibration before using the ADCs
+
+    // there's a voltage divider on the input, so the raw reading is half of the battery
+    // voltage level.   The nominal voltage is 3300 mV, with a calibration reference of
+    // 1.100 V.   The full multiplication is done before dividing by the resolution of the
+    // ADC, giving us something in the ballpark of the real voltage reading.
+
+    int actualBatteryVoltage = int((float(rawBatteryADCLevel)*2.0 * 3300 * 1.100) / 4095.0);
+
+    return actualBatteryVoltage;
 }
 
 
@@ -380,10 +398,10 @@ ESP32HW::report_battery_level()
         return;
     }
 
-    int battery_level = 100;
+    int battery_level = read_battery_level();
     static int last_battery_level = -1;
 
-    if (battery_level != last_battery_level) {
+    if (abs(battery_level - last_battery_level) > BATTERY_CHANGE_THRESHOLD) {
         delegate->batteryLevelChanged(battery_level);
 
         last_battery_level = battery_level;
