@@ -5,6 +5,21 @@ extern "C" {
 #endif
 
 
+// HW Data Processing Rates (measured in ms)
+
+// update whether or not the throttle has moved
+#define ACCELEROMETER_MOTION_READ_RATE  (1000/5)   // 5Hz
+
+// how frequently we report (via the delegate) the speed & direction
+#define SPEED_POT_REPORT_RATE           (1000/15)  // 15Hz
+
+// internally, how often we read the potentiometer (to implement oversampling)
+#define SPEED_POT_READ_RATE             (1000/(SPEED_POT_REPORT_RATE * 5))
+
+// how frequently we read the battery level
+#define BATTERY_CHECK_READ_RATE         (2500)
+
+
 // I2C address of the 7 segment display.  Stick with the default address of
 // 0x70 unless you've changed the address jumpers on the back of the
 // display.
@@ -35,15 +50,19 @@ extern "C" {
 #define DIR_LEFT                 (15)
 #define DIR_RIGHT                (33)
 
+// Basic Pilot Light -- blink under direct ESP32 control
+#define PILOT_LIGHT              (21)
+
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
 //
 // These are pin numbers on the SX1509 GPIO extender
 //
-#define RGB_RED    (15)
-#define RGB_GREEN  (14)
-#define RGB_BLUE   (13)
+#define STATUS_RED    (15)
+#define STATUS_GREEN  (14)
+#define STATUS_BLUE   (13)
 
 #define BUTTON1    (7)
 #define BUTTON2    (6)
@@ -57,12 +76,6 @@ extern "C" {
 #define BRAKE      (8)
 
 #define LED1       (9)
-
-
-// LEDs are in an active-low configuration
-#define SX1509_OFF (1)
-#define SX1509_ON  (0)
-
 
 //
 ////////////////////////////////////////////////////////////////////////////////
