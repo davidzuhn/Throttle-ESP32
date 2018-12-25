@@ -24,7 +24,7 @@ class PilotLight
         digitalWrite(pin, 0);
     }
 
-    void check()
+    bool check()
     {
         if (timer.hasPassed(PILOT_LIGHT_BLINK_TIME)) {
             timer.restart();
@@ -32,7 +32,10 @@ class PilotLight
             int state = digitalRead(pin);
             state = !state;
             digitalWrite(pin, state);
+
+            return true;
         }
+        return false;
     }
 
   private:
