@@ -93,6 +93,10 @@ WifiInfo::begin(BLEServer *bleServer)
 void
 WifiInfo::onWrite(BLECharacteristic *characteristic)
 {
+    if (!characteristic) {
+        return;
+    }
+
     Serial.print("write for UUID: ");
     Serial.println(characteristic->getUUID().toString().c_str());
 
@@ -141,6 +145,10 @@ WifiInfo::onWrite(BLECharacteristic *characteristic)
 void
 WifiInfo::onRead(BLECharacteristic *characteristic)
 {
+    if (!characteristic) {
+        return;
+    }
+
     Serial.print("read value for ");
     Serial.println(characteristic->getUUID().toString().c_str());
 
