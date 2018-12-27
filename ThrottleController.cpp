@@ -292,6 +292,10 @@ void ThrottleController::updateFastTimeDisplay()
     int minutes = wiThrottle.fastTimeMinutes();
 
     hw.setTimeDisplay(hour, minutes);
+
+    float rate = wiThrottle.fastTimeRate();
+    TimeStatus state = (rate == 0.0f) ? Paused : Running;
+    hw.setTimeStatus(state);
 }
 
 
