@@ -2,12 +2,9 @@
 
 #include <FunctionalInterrupt.h>
 
-#include "BSP.h"
+using namespace std::placeholders;   // for std::bind
 
 
-
-
-using namespace std::placeholders;
 
 ThrottleController::ThrottleController(ThrottleData& flashData):
     client(),
@@ -20,7 +17,41 @@ ThrottleController::ThrottleController(ThrottleData& flashData):
     restartWifiOnNextCycle(false)
 {
     Serial.print("ThrottleController constructed");
+    setThrottleState(TSTATE_WIFI_DISCONNECTED);
 }
+
+
+void
+ThrottleController::setThrottleState(ThrottleState newState)
+{
+    switch (newState) {
+        case TSTATE_UNKNOWN:
+            Serial.println("now TSTATE_UNKNOWN");
+            wifiInfo.setConnectionState("UNKNOWN");
+            break;
+        case TSTATE_WIFI_DISCONNECTED:
+            Serial.println("TSTATE_WIFI_DISCONNECTED");
+            wifiInfo.setConnectionState("WIFI_DISCONNECTED");
+            break;
+        case TSTATE_WIFI_CONNECTED:
+            Serial.println("TSTATE_WIFI_CONNECTED");
+            wifiInfo.setConnectionState("WIFI_CONNECTED");
+            break;
+        case TSTATE_WITHROTTLE_CONNECTED:
+            Serial.println("TSTATE_WITHROTTLE_CONNECTED");
+            wifiInfo.setConnectionState("WITHROTTLE_CONNECTED");
+            break;
+        case TSTATE_WITHROTTLE_ACTIVE:
+            Serial.println("TSTATE_WITHROTTLE_ACTIVE");
+            break;
+            wifiInfo.setConnectionState("WITHROTTLE_ACTIVE");
+        default:
+            Serial.println("change to ___UNDEFINED___ TSTATE value ");
+            wifiInfo.setConnectionState("** UNDEFINED **");
+            break;
+    }
+}
+
 
 #if 0
 void
@@ -96,8 +127,7 @@ ThrottleController::loop()
 //    clockDisplay.writeDisplay();
 
     // BLE is not connected at this time, nor is WiFI
-    //statusLED.setWifiDisconnected();
-    wifiInfo.setConnectionState("WIFI_DISCONNECTED");
+    setThrottleState(TSTATE_WIFI_DISCONNECTED);
 
     Serial.println("wifi is disconnected");
 
@@ -122,8 +152,7 @@ ThrottleController::loop()
     }
 
     // light blue when connected to WiThrottle server
-    //statusLED.setWifiConnected();
-    wifiInfo.setConnectionState("WIFI_CONNECTED");
+    setThrottleState(TSTATE_WIFI_CONNECTED);
 
     Serial.println("wifi connected");
 
@@ -143,8 +172,7 @@ ThrottleController::loop()
     }
 
     // bright blue when connected to WiThrottle server
-    //statusLED.setThrottleConnected();
-    wifiInfo.setConnectionState("WITHROTTLE_CONNECTED");
+    setThrottleState(TSTATE_WITHROTTLE_CONNECTED);
 
     while (true) {
         hw.check();
@@ -157,10 +185,8 @@ ThrottleController::loop()
                 wiThrottle.requireHeartbeat();
             }
             if (! client.connected()) {
-                //statusLED.setWifiDisconnected();
-                wifiInfo.setConnectionState("WIFI_DISCONNECTED");
+                setThrottleState(TSTATE_WIFI_DISCONNECTED);
                 wiThrottle.disconnect();
-                Serial.println("Network Disconnected");
                 return;
             }
 
@@ -204,45 +230,9 @@ void
 ThrottleController::receivedFunctionState(uint8_t func, bool state)
 {
     Serial.printf("display function state F%d: %d\n", func, state);
+
+    // do something with hw.<xyz?> to indicate the function state
     return;
-#if 0
-    // TODO - abstract this into the BSP
-    //  this should also set state via BLE so the phone sees the function status
-    //  (support the phone sending function state to the throttle to send upstream,
-    //  to allow all functions to be available
-
-    int pin = -1;
-    state = !state;;   // inverted outputs
-
-    // TODO: these mappings should be part of user-controllable configuration
-    switch(func) {
-        case 0:
-            pin = 5;
-            break;
-        case 1:
-            pin = 4;
-            break;
-        case 2:
-            pin = 3;
-            break;
-        case 3:
-            pin = 2;
-            break;
-        case 4:
-            pin = 1;
-            break;
-        case 9:
-            pin = 6;
-            break;
-        default:
-            break;
-    }
-
-    if (pin != -1) {
-        Serial.printf("setting LED %d to %d\n", pin, state);
-        sx1509.digitalWrite(pin, state);
-    }
-#endif
 }
 
 
@@ -315,7 +305,6 @@ ThrottleController::directionFromTogglePosition(TogglePosition position)
     value = Reverse;
   }
 
-  Serial.print("TogglePosition "); Serial.print(position); Serial.print(" => Direction "); Serial.println(value);
   return value;
 }
 
@@ -339,9 +328,7 @@ void
 ThrottleController::wifiOnDisconnect() {
   client.stop();
   wiThrottle.disconnect();
-  //statusLED.setWifiDisconnected();
-  wifiInfo.setConnectionState("WIFI_DISCONNECTED");
-  Serial.println("STA Disconnected");
+  setThrottleState(TSTATE_WIFI_DISCONNECTED);
 }
 
 void

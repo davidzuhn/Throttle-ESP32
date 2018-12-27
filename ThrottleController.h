@@ -25,6 +25,15 @@
 
 
 
+typedef enum ThrottleState
+{
+    TSTATE_UNKNOWN = 0,
+    TSTATE_WIFI_DISCONNECTED,
+    TSTATE_WIFI_CONNECTED,
+    TSTATE_WITHROTTLE_CONNECTED,
+    TSTATE_WITHROTTLE_ACTIVE
+} ThrottleState;
+
 
 
 class ThrottleController:
@@ -40,6 +49,8 @@ class ThrottleController:
     void loop();
 
     void wifiCommandReceived(std::string command);
+
+    void setThrottleState(ThrottleState newState);
 
     // WiThrottleDelegate methods
     void receivedDirection(Direction dir);
@@ -72,6 +83,8 @@ class ThrottleController:
     void updateDirection(TogglePosition togglePosition);
     Direction directionFromTogglePosition(TogglePosition position);
 
+
+
     WiFiClient     client;
     ESP32HW        hw;
     WiThrottle     wiThrottle;
@@ -82,4 +95,5 @@ class ThrottleController:
     BLEServer      *bleServer;
     ThrottleData&  flashData;
     bool           restartWifiOnNextCycle;
+    ThrottleState  currentThrottleState;
 };
