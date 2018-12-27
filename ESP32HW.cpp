@@ -645,6 +645,6 @@ ESP32HW::setTimeStatus(TimeStatus status)
             break;
     }
 
-    Serial.printf("clock brightness set to %d\n", brightness);
+    //Serial.printf("clock brightness set to %d\n", brightness);
     numericDisplay.setBrightness(brightness);
 }
