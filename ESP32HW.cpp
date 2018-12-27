@@ -2,11 +2,121 @@
 
 #include "ESP32HW.h"
 
-#include "BSP.h"
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Hardware specification / definition for the ESP32 based BKT-0 throttle
+//
+//
+
+// HW Data Processing Rates (measured in ms)
+
+// update whether or not the throttle has moved
+#define ACCELEROMETER_MOTION_READ_RATE  (1000/5)   // 5Hz
+
+// how frequently we report (via the delegate) the speed & direction
+#define SPEED_POT_REPORT_RATE           (1000/20)  // 20Hz
+
+// internally, how often we read the potentiometer (to implement oversampling)
+// read the speed pot 5 times for every report we make upstream
+#define SPEED_POT_READ_RATE             (SPEED_POT_REPORT_RATE/5)
+
+// how frequently we read the battery level
+#define BATTERY_CHECK_READ_RATE         (2500)     // every 2.5 seconds
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// HW submodules that have individual addressing (I2C or SPI)
+//
+
+// I2C address of the 14 segment display.  Stick with the default address of
+// 0x70 unless you've changed the address jumpers on the back of the
+// display.
+#define ALPHANUM_DISPLAY_ADDRESS (0x77)   // NOTE: jumpers soldered to change address
+
+// I2C address of the SX1509 GPIO expander.
+#define SX1509_I2C_ADDRESS       (0x3E)
+
+// the INTR output pin of the SX1509 is attached to this pin on the ESP32
+#define SX1509_INTR_PIN          (27)  // ESP32 A10
+
+// I2C address of the LIS3DH accelerometer
+#define ACCEL_I2C_ADDRESS        (0x18)
+
+// the INTR output pin of the LIS3DH is attached to this pin on the ESP32
+#define ACCEL_INTR_PIN           (39)  // ESP32 A3
+
+// I2C address of the DRV2605 haptic feedback motor controller (this is not
+// needed in code, included here for completeness in mapping the hardware
+// pin assignments)
+#define HAPTIC_I2C_ADDRESS       (DRV2605_ADDR)   // usually 0x5A
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Pin assignments directly on the ESP32 module (currently on the Huzzah32 feather)
+//
+
+// Linear potentiometer used for speed control (analog value read via ADC)
+#define SPEED_KNOB               (A4)
+
+// Toggle Switch for direction selection.  At most ONE of these two will be
+// connected to ground.  Using a CENTER OFF toggle, it is possible that
+// neither of these will be connected to ground.
+#define DIR_LEFT                 (15)
+#define DIR_RIGHT                (33)
+
+// Basic Pilot Light -- blink under direct ESP32 control
+#define PILOT_LIGHT              (21)
+
+// battery level is read through this pin (analog value read via ADC)
+#define BATTERY_LEVEL_PIN        (A13)
+
+// do not report any changes to the current battery level until they exceed this
+// value (in mV)
+#define BATTERY_CHANGE_THRESHOLD   (50)
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// These are pin numbers on the SX1509 GPIO extender
+//
+#define STATUS_RED    (15)
+#define STATUS_GREEN  (14)
+#define STATUS_BLUE   (13)
+
+#define BUTTON1    (7)
+#define BUTTON2    (6)
+#define BUTTON3    (5)
+#define BUTTON4    (4)
+#define BUTTON5    (3)
+#define BUTTON6    (2)
+#define BUTTON7    (1)
+#define BUTTON8    (0)
+
+#define BRAKE      (8)
+
+#define LED1       (9)
+
+//
+////////////////////////////////////////////////////////////////////////////////
+
 
 // LEDs are in an active-low configuration
 #define GPIO_OFF (1)
 #define GPIO_ON  (0)
+
+
+// define ONLY one of the following time displays
+//  TODO: make this a runtime configurable
+#define TWELVE_HOUR_TIME      (1)
+#define TWENTYFOUR_HOUR_TIME  (0)
+
+
+//
+//
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 
 ESP32HW::ESP32HW() :
@@ -50,7 +160,8 @@ ESP32HW::begin()
     return rv;
 }
 
-
+// This method is called every time the accelerometer interrupt changes state
+//
 void
 ESP32HW::accelerometer_isr()
 {
@@ -59,6 +170,9 @@ ESP32HW::accelerometer_isr()
 }
 
 
+// This method is called every time the SX1509 interrupt drops low
+// (indicating that one or more inputs have been registered).
+//
 void
 ESP32HW::gpio_isr()
 {
@@ -241,8 +355,8 @@ ESP32HW::read_buttons()
     }
 
     unsigned int intrStatus = gpio.interruptSource();
-    // For debugging handiness, print the intStatus variable.
-    //Serial.print("button interrupt: "); Serial.print(intrStatus, BIN); Serial.println("");
+    // For debugging handiness, print the intrStatus variable.
+    // Serial.print("button interrupt: "); Serial.print(intrStatus, BIN); Serial.println("");
 
     // Each bit in intStatus represents a single SX1509 I/O.  Check all thet
     // we know about each time we get notified of a change.
@@ -490,6 +604,28 @@ ESP32HW::triggerHapticMotor(int mode)
 void
 ESP32HW::setTimeDisplay(int hour, int minute)
 {
+#if TWELVE_HOUR_TIME
+    if (hour > 12) {
+        hour = hour - 12;
+    }
+
+    numericDisplay.writeDigitAscii(0, hour >= 10 ? '1' : ' ');
+#else
+    if (hour >= 20) {
+        numericDisplay.writeDigitAscii(0, '2');
+    }
+    else if (hour >= 10) {
+        numericDisplay.writeDigitAscii(0, '1');
+    }
+    else {
+        numericDisplay.writeDigitAscii(0, '0');
+    }
+#endif
+    numericDisplay.writeDigitAscii(1, '0' + (hour % 10), true);
+
+    numericDisplay.writeDigitAscii(2, '0' + (minute / 10));
+    numericDisplay.writeDigitAscii(3, '0' + (minute % 10));
+    numericDisplay.writeDisplay();
 }
 
 
