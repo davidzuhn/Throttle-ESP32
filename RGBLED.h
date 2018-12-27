@@ -49,16 +49,6 @@ class SX1509RGBLED
         sx1509.analogWrite(bluePin, blue);
     }
 
-    void
-    setWifiDisconnected() { set(0x20, 0x00, 0x00); }
-
-    void
-    setWifiConnected() { set(0x00, 0x20, 0x00); }
-
-    void
-    setThrottleConnected() { set(0x00, 0x00, 0x60); }
-
-
   private:
     SX1509& sx1509;
     int redPin;
