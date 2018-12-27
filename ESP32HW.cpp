@@ -632,4 +632,19 @@ ESP32HW::setTimeDisplay(int hour, int minute)
 void
 ESP32HW::setTimeStatus(TimeStatus status)
 {
+    uint8_t brightness;  // Backpack brightness ranges from 0..15
+    switch (status) {
+        case Running:
+            brightness = 15;
+            break;
+        case Paused:
+            brightness = 2;
+            break;
+        default:
+            brightness = 0;
+            break;
+    }
+
+    Serial.printf("clock brightness set to %d\n", brightness);
+    numericDisplay.setBrightness(brightness);
 }
