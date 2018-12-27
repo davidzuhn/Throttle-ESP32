@@ -179,6 +179,8 @@ WifiInfo::setConnectionState(std::string state)
 {
     Serial.print("BLE: setConnectionState "); Serial.println(state.c_str());
     connectionState = state;
-    statusCharacteristic->setValue(connectionState);
-    statusCharacteristic->notify();
+    if (statusCharacteristic) {
+        statusCharacteristic->setValue(connectionState);
+        statusCharacteristic->notify();
+    }
 }
