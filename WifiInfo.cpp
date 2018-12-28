@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "DebugSerial.h"
 
 #include "WifiInfo.h"
 
@@ -13,7 +14,7 @@ WifiInfo::WifiInfo(ThrottleData& flashData):
     advertisements(NULL),
     flashData(flashData)
 {
-    Serial.println("WifiInfo constructor");
+    DebugSerial.println("WifiInfo constructor");
 }
 
 
@@ -29,8 +30,8 @@ WifiInfo::begin(BLEServer *bleServer)
                                                                    | BLECharacteristic::PROPERTY_WRITE);
             ssidCharacteristic->setCallbacks(this);
 
-            Serial.println("SSID Characteristic: ");
-            Serial.println(ssidCharacteristic->toString().c_str());
+            DebugSerial.println("SSID Characteristic: ");
+            DebugSerial.println(ssidCharacteristic->toString().c_str());
 
 
             passwordCharacteristic = wifiService->createCharacteristic(WIFI_PASSWORD_CHARACTERISTIC_UUID,
@@ -71,21 +72,21 @@ WifiInfo::begin(BLEServer *bleServer)
 
 
             wifiService->start();
-            Serial.println("BLE wifiService started");
+            DebugSerial.println("BLE wifiService started");
 
             advertisements = bleServer->getAdvertising();
 
             advertisements->addServiceUUID(wifiService->getUUID());
             advertisements->includeName(false);
             advertisements->start();
-            Serial.println("BLE advertising started");
+            DebugSerial.println("BLE advertising started");
         }
         else {
-            Serial.println("no wifiService created");
+            DebugSerial.println("no wifiService created");
         }
     }
     else {
-        Serial.println("no bleServer in WifiInfo::begin");
+        DebugSerial.println("no bleServer in WifiInfo::begin");
     }
 }
 
@@ -97,35 +98,35 @@ WifiInfo::onWrite(BLECharacteristic *characteristic)
         return;
     }
 
-    Serial.print("write for UUID: ");
-    Serial.println(characteristic->getUUID().toString().c_str());
+    DebugSerial.print("write for UUID: ");
+    DebugSerial.println(characteristic->getUUID().toString().c_str());
 
     if (characteristic->getUUID().equals(BLEUUID(WIFI_SSID_CHARACTERISTIC_UUID))) {
         ssid = characteristic->getValue();
         flashData.saveWifiSSID(ssid);
-        Serial.print("write for ssid "); Serial.println(characteristic->getValue().c_str());
+        DebugSerial.print("write for ssid "); DebugSerial.println(characteristic->getValue().c_str());
     }
     else
     if (characteristic->getUUID().equals(BLEUUID(WIFI_PASSWORD_CHARACTERISTIC_UUID))) {
         password = characteristic->getValue();
         flashData.saveWifiPassword(password);
-        Serial.print("write for password "); Serial.println(characteristic->getValue().c_str());
+        DebugSerial.print("write for password "); DebugSerial.println(characteristic->getValue().c_str());
     }
     else
     if (characteristic->getUUID().equals(BLEUUID(WIFI_SERVER_CHARACTERISTIC_UUID))) {
         serverAddress = characteristic->getValue();
         flashData.saveServerAddress(serverAddress);
-        Serial.print("write for server address "); Serial.println(characteristic->getValue().c_str());
+        DebugSerial.print("write for server address "); DebugSerial.println(characteristic->getValue().c_str());
     }
     else
     if (characteristic->getUUID().equals(BLEUUID(WIFI_PORT_CHARACTERISTIC_UUID))) {
         serverPort = characteristic->getValue();
         flashData.saveServerPort(serverPort);
-        Serial.print("write for server port "); Serial.println(characteristic->getValue().c_str());
+        DebugSerial.print("write for server port "); DebugSerial.println(characteristic->getValue().c_str());
     }
     else
     if (characteristic->getUUID().equals(BLEUUID(WIFI_COMMAND_CHARACTERISTIC_UUID))) {
-        Serial.print("write for command "); Serial.println(characteristic->getValue().c_str());
+        DebugSerial.print("write for command "); DebugSerial.println(characteristic->getValue().c_str());
         if (delegate) {
             delegate->wifiCommandReceived(characteristic->getValue());
         }
@@ -134,10 +135,10 @@ WifiInfo::onWrite(BLECharacteristic *characteristic)
     if (characteristic->getUUID().equals(BLEUUID(DEVICE_NAME_CHARACTERISTIC_UUID))) {
         auto deviceName = characteristic->getValue();
         flashData.saveDeviceName(deviceName);
-        Serial.print("write for device name "); Serial.println(characteristic->getValue().c_str());
+        DebugSerial.print("write for device name "); DebugSerial.println(characteristic->getValue().c_str());
     }
     else {
-        Serial.printf("received write for unknown UUID: %s\n", characteristic->getUUID().toString());
+        DebugSerial.printf("received write for unknown UUID: %s\n", characteristic->getUUID().toString());
     }
 }
 
@@ -149,8 +150,8 @@ WifiInfo::onRead(BLECharacteristic *characteristic)
         return;
     }
 
-    Serial.print("read value for ");
-    Serial.println(characteristic->getUUID().toString().c_str());
+    DebugSerial.print("read value for ");
+    DebugSerial.println(characteristic->getUUID().toString().c_str());
 
     if (characteristic->getUUID().equals(BLEUUID(WIFI_SSID_CHARACTERISTIC_UUID))) {
         auto ssid = flashData.getWifiSSID();
@@ -185,7 +186,7 @@ WifiInfo::onRead(BLECharacteristic *characteristic)
 void
 WifiInfo::setConnectionState(std::string state)
 {
-    Serial.print("BLE: setConnectionState "); Serial.println(state.c_str());
+    DebugSerial.print("BLE: setConnectionState "); DebugSerial.println(state.c_str());
     connectionState = state;
     if (statusCharacteristic) {
         statusCharacteristic->setValue(connectionState);

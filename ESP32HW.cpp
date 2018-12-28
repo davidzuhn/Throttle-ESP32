@@ -74,7 +74,12 @@
 
 // do not report any changes to the current battery level until they exceed this
 // value (in mV)
-#define BATTERY_CHANGE_THRESHOLD   (50)
+#define BATTERY_CHANGE_THRESHOLD (50)
+
+
+// mini tactile buttons
+#define OTA_BUTTON               (14)   // A6
+#define EXTRA_BUTTON             (32)   // A7
 
 
 ////////////////////////////////////////////////////////////////////////////////

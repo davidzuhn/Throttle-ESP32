@@ -1,4 +1,5 @@
 #include "ThrottleData.h"
+#include "DebugSerial.h"
 
 
 #include "FS.h"
@@ -32,7 +33,7 @@ ThrottleData::begin()
         size_t total = SPIFFS.totalBytes();
         size_t used  = SPIFFS.usedBytes();
 
-        Serial.printf("FS %d/%d bytes\n", used, total);
+        DebugSerial.printf("FS %d/%d bytes\n", used, total);
     }
 
     return rv;
@@ -47,11 +48,11 @@ writeFile(std::string filename, std::string content)
     File file = SPIFFS.open(filename.c_str(), FILE_WRITE);
     if (!file || file.isDirectory()) {
         rv = false;
-        Serial.printf("unable to open file %s\n", filename.c_str());
+        DebugSerial.printf("unable to open file %s\n", filename.c_str());
     }
     else {
         rv = file.print(content.c_str());
-        Serial.printf("write file %s with '%s': %d\n", filename.c_str(), content.c_str(), rv);
+        DebugSerial.printf("write file %s with '%s': %d\n", filename.c_str(), content.c_str(), rv);
     }
 
     return rv;

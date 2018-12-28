@@ -35,12 +35,18 @@
 #include "ThrottleController.h"
 #include "ThrottleData.h"
 
+#include "DebugSerial.h"
+
 ThrottleData flashData;
 ThrottleController controller(flashData);
 
 
 void setup() {
-    Serial.begin(115200);
+#if TTL_DEBUG
+    DebugSerial.begin(115200, SERIAL_8N1, 17, 16);
+#else
+    DebugSerial.begin(115200);
+#endif
 
     if (!flashData.begin()) {
         Serial.println("SPIFFS Mount Failed");
