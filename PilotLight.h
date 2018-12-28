@@ -21,7 +21,7 @@ class PilotLight
     {
         this->pin = pin;
         pinMode(pin, OUTPUT);
-        digitalWrite(pin, 0);
+        digitalWrite(pin, 1);  // turn off the light at the start
     }
 
     bool check()

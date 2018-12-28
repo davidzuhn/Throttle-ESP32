@@ -17,7 +17,6 @@ ThrottleController::ThrottleController(ThrottleData& flashData):
     restartWifiOnNextCycle(false)
 {
     Serial.print("ThrottleController constructed");
-    setThrottleState(TSTATE_WIFI_DISCONNECTED);
 }
 
 
@@ -53,7 +52,7 @@ ThrottleController::setThrottleState(ThrottleState newState)
             break;
         case TSTATE_WITHROTTLE_ACTIVE:
             Serial.println("TSTATE_WITHROTTLE_ACTIVE");
-            hw.setRGB(0, 0x00, 0x00, 0xFF);
+            hw.setRGB(0, 0x80, 0x80, 0x80);
             wifiInfo.setConnectionState("WITHROTTLE_ACTIVE");
             break;
         default:
@@ -105,6 +104,8 @@ ThrottleController::begin()
 {
     hw.begin();
 
+    setThrottleState(TSTATE_WIFI_DISCONNECTED);
+
     bleServer = BLEDevice::createServer();
 
     wifiInfo.begin(bleServer);
@@ -115,6 +116,31 @@ ThrottleController::begin()
     hw.delegate         = this;    // and for hardware changes
 
     Serial.println("ThrottleController.begin complete");
+}
+
+
+
+void
+ThrottleController::test_loop()
+{
+    hw.setRGB(0, 0x00, 0x00, 0x00);
+    delay(500);
+
+    hw.setRGB(0, 0xFF, 0x00, 0x00);
+    delay(500);
+
+    hw.setRGB(0, 0x00, 0xFF, 0x00);
+    delay(500);
+
+    hw.setRGB(0, 0x00, 0x00, 0xFF);
+    delay(500);
+
+    for (int i = 0x00; i < 0x100; i += 0x8) {
+        hw.setRGB(0, i, i, i);
+        delay(20);
+    }
+
+
 }
 
 

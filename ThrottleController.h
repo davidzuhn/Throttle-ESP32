@@ -48,6 +48,8 @@ class ThrottleController:
 
     void loop();
 
+    void test_loop();   // run the HW tests
+
     void wifiCommandReceived(std::string command);
 
     void setThrottleState(ThrottleState newState);
