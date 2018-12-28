@@ -24,32 +24,45 @@ ThrottleController::ThrottleController(ThrottleData& flashData):
 void
 ThrottleController::setThrottleState(ThrottleState newState)
 {
+    if (newState == currentThrottleState) {
+        // no change has occurred, do nothing at this point
+        return;
+    }
+
+    // we have a new state
     switch (newState) {
         case TSTATE_UNKNOWN:
             Serial.println("now TSTATE_UNKNOWN");
             wifiInfo.setConnectionState("UNKNOWN");
+            hw.setRGB(0, 0x00, 0x00, 0x00);
             break;
         case TSTATE_WIFI_DISCONNECTED:
             Serial.println("TSTATE_WIFI_DISCONNECTED");
             wifiInfo.setConnectionState("WIFI_DISCONNECTED");
+            hw.setRGB(0, 0xFF, 0x00, 0x00);
             break;
         case TSTATE_WIFI_CONNECTED:
             Serial.println("TSTATE_WIFI_CONNECTED");
             wifiInfo.setConnectionState("WIFI_CONNECTED");
+            hw.setRGB(0, 0x00, 0x80, 0x00);
             break;
         case TSTATE_WITHROTTLE_CONNECTED:
             Serial.println("TSTATE_WITHROTTLE_CONNECTED");
             wifiInfo.setConnectionState("WITHROTTLE_CONNECTED");
+            hw.setRGB(0, 0x00, 0xFF, 0x00);
             break;
         case TSTATE_WITHROTTLE_ACTIVE:
             Serial.println("TSTATE_WITHROTTLE_ACTIVE");
-            break;
+            hw.setRGB(0, 0x00, 0x00, 0xFF);
             wifiInfo.setConnectionState("WITHROTTLE_ACTIVE");
+            break;
         default:
             Serial.println("change to ___UNDEFINED___ TSTATE value ");
             wifiInfo.setConnectionState("** UNDEFINED **");
             break;
     }
+
+    currentThrottleState = newState;
 }
 
 
@@ -219,6 +232,7 @@ ThrottleController::receivedVersion(String version)
 {
     Serial.print("received protocol version string ");
     Serial.println(version);
+    setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
 }
 
 
@@ -230,6 +244,8 @@ void
 ThrottleController::receivedFunctionState(uint8_t func, bool state)
 {
     Serial.printf("display function state F%d: %d\n", func, state);
+
+    hw.setLight(func, state == 0 ? 0 : 255);
 
     // do something with hw.<xyz?> to indicate the function state
     return;
@@ -428,7 +444,7 @@ ThrottleController::batteryLevelChanged(int batteryLevel)
 void
 ThrottleController::functionButtonChanged(int func, bool pressed)
 {
-    Serial.printf("** Function F%d changed to %d\n", func, pressed);
+    Serial.printf("** button F%d changed to %s\n", func, pressed ? "PRESSED" : "RELEASED");
 
     wiThrottle.setFunction(func, pressed);
 }

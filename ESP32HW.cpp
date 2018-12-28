@@ -435,6 +435,9 @@ ESP32HW::read_toggle_position()
 void
 ESP32HW::report_speed()
 {
+    bool turnedToZero = false;
+    bool turnedToMax = false;
+
     if (!delegate) {
         // no one is listening, just stop...
         return;
@@ -454,6 +457,13 @@ ESP32HW::report_speed()
 
     // reset the accumulator
     speedAccumulator = speedCount = 0;
+
+    if (speedValue == 0 && previousSpeedValue != 0) {
+        turnedToZero = true;
+    }
+    if (speedValue == 126 && previousSpeedValue != 126) {
+        turnedToMax = true;
+    }
 
     if (togglePosition == CenterOff) {
         // center off position
@@ -482,6 +492,12 @@ ESP32HW::report_speed()
     if (speed_changed) {
         //Serial.printf("speed changed: %d, toggle position: %d\n", speedValue, togglePosition);
         delegate->speedChanged(speedValue, togglePosition);
+    }
+    if (turnedToZero) {
+        triggerHapticMotor(26);
+    }
+    else if (turnedToMax) {
+        triggerHapticMotor(17);
     }
 }
 
@@ -586,18 +602,28 @@ ESP32HW::check()
 void
 ESP32HW::setLight(int light, uint8_t state)
 {
+    state = 255 - state;   // the LED is active LOW, so state==0 should be OFF
+    if (light == 9) { // corresponds to function number, TODO: fix this
+        gpio.digitalWrite(LED1, state);
+    }
 }
 
 
 void
 ESP32HW::setRGB(int light, uint8_t red, uint8_t green, uint8_t blue)
 {
+    if (light==0) {
+        statusLED.set(red, green, blue);
+    }
 }
 
 
 void
 ESP32HW::triggerHapticMotor(int mode)
 {
+    hapticMotorController.setWaveform(0, mode);
+    hapticMotorController.setWaveform(1, 0);
+    hapticMotorController.go();
 }
 
 
@@ -607,6 +633,9 @@ ESP32HW::setTimeDisplay(int hour, int minute)
 #if TWELVE_HOUR_TIME
     if (hour > 12) {
         hour = hour - 12;
+    }
+    if (hour == 0) {
+        hour = 12;
     }
 
     numericDisplay.writeDigitAscii(0, hour >= 10 ? '1' : ' ');
