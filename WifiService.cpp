@@ -1,9 +1,9 @@
 #include "Arduino.h"
 
-#include "WifiInfo.h"
+#include "WifiService.h"
 
 
-WifiInfo::WifiInfo(ThrottleData& flashData):
+WifiService::WifiService(ThrottleData& flashData):
     ssid(),
     password(),
     serverAddress(),
@@ -17,7 +17,7 @@ WifiInfo::WifiInfo(ThrottleData& flashData):
 
 
 void
-WifiInfo::begin(BLEServer *bleServer, Stream *console)
+WifiService::begin(BLEServer *bleServer, Stream *console)
 {
     this->console = console;
 
@@ -86,15 +86,15 @@ WifiInfo::begin(BLEServer *bleServer, Stream *console)
         }
     }
     else {
-        console->println("no bleServer in WifiInfo::begin");
+        console->println("no bleServer in WifiService::begin");
     }
 
-    console->println("WifiInfo setup complete");
+    console->println("WifiService setup complete");
 }
 
 
 void
-WifiInfo::onWrite(BLECharacteristic *characteristic)
+WifiService::onWrite(BLECharacteristic *characteristic)
 {
     if (!characteristic) {
         return;
@@ -146,7 +146,7 @@ WifiInfo::onWrite(BLECharacteristic *characteristic)
 
 
 void
-WifiInfo::onRead(BLECharacteristic *characteristic)
+WifiService::onRead(BLECharacteristic *characteristic)
 {
     if (!characteristic) {
         return;
@@ -186,7 +186,7 @@ WifiInfo::onRead(BLECharacteristic *characteristic)
 
 
 void
-WifiInfo::setConnectionState(std::string state)
+WifiService::setConnectionState(std::string state)
 {
     console->print("BLE: setConnectionState "); console->println(state.c_str());
     connectionState = state;

@@ -15,12 +15,12 @@
 
 
 #include "WiThrottle.h"
-#include "WifiInfo.h"
 
 #include "ThrottleData.h"
 
 // Several BLE Services available on this device...
 #include "ThrottleService.h"
+#include "WifiService.h"
 
 
 #define ADAFRUIT_ALPHANUM 1
@@ -40,7 +40,7 @@ typedef enum ThrottleState
 
 class ThrottleController:
     public WiThrottleDelegate,
-    public WifiInfoDelegate,
+    public WifiServiceDelegate,
     public ThrottleHWDelegate
 {
   public:
@@ -94,7 +94,7 @@ class ThrottleController:
     WiThrottle     wiThrottle;
     bool           wifiConnected;
     int            port;
-    WifiInfo       wifiInfo;
+    WifiService    wifiService;
     ThrottleService throttleService;
     BLEServer      *bleServer;
     ThrottleData   flashData;

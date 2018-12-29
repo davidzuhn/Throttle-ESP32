@@ -11,7 +11,7 @@ ThrottleController::ThrottleController():
     hw(),
     wiThrottle(),
     port(12090),
-    wifiInfo(flashData),
+    wifiService(flashData),
     bleServer(NULL),
     flashData(),
     restartWifiOnNextCycle(false)
@@ -32,32 +32,32 @@ ThrottleController::setThrottleState(ThrottleState newState)
     switch (newState) {
         case TSTATE_UNKNOWN:
             hw.console->println("now TSTATE_UNKNOWN");
-            wifiInfo.setConnectionState("UNKNOWN");
+            wifiService.setConnectionState("UNKNOWN");
             hw.setRGB(0, 0x00, 0x00, 0x00);
             break;
         case TSTATE_WIFI_DISCONNECTED:
             hw.console->println("TSTATE_WIFI_DISCONNECTED");
-            wifiInfo.setConnectionState("WIFI_DISCONNECTED");
+            wifiService.setConnectionState("WIFI_DISCONNECTED");
             hw.setRGB(0, 0xFF, 0x00, 0x00);
             break;
         case TSTATE_WIFI_CONNECTED:
             hw.console->println("TSTATE_WIFI_CONNECTED");
-            wifiInfo.setConnectionState("WIFI_CONNECTED");
+            wifiService.setConnectionState("WIFI_CONNECTED");
             hw.setRGB(0, 0x00, 0x80, 0x00);
             break;
         case TSTATE_WITHROTTLE_CONNECTED:
             hw.console->println("TSTATE_WITHROTTLE_CONNECTED");
-            wifiInfo.setConnectionState("WITHROTTLE_CONNECTED");
+            wifiService.setConnectionState("WITHROTTLE_CONNECTED");
             hw.setRGB(0, 0x00, 0xFF, 0x00);
             break;
         case TSTATE_WITHROTTLE_ACTIVE:
             hw.console->println("TSTATE_WITHROTTLE_ACTIVE");
             hw.setRGB(0, 0x80, 0x80, 0x80);
-            wifiInfo.setConnectionState("WITHROTTLE_ACTIVE");
+            wifiService.setConnectionState("WITHROTTLE_ACTIVE");
             break;
         default:
             hw.console->println("change to ___UNDEFINED___ TSTATE value ");
-            wifiInfo.setConnectionState("** UNDEFINED **");
+            wifiService.setConnectionState("** UNDEFINED **");
             break;
     }
 
@@ -120,13 +120,13 @@ ThrottleController::begin()
     bleServer = BLEDevice::createServer();
 
     // set up the BLE services
-    wifiInfo.begin(bleServer, hw.console);
+    wifiService.begin(bleServer, hw.console);
     throttleService.begin(bleServer, hw.console);
 
     setThrottleState(TSTATE_WIFI_DISCONNECTED);
 
     wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
-    wifiInfo.delegate   = this;    // appropriate callbacks for BLE Wifi info
+    wifiService.delegate = this;    // appropriate callbacks for BLE Wifi info
     hw.delegate         = this;    // and for hardware changes
 
     hw.console->println("ThrottleController.begin complete");

@@ -24,7 +24,7 @@
 #define DEVICE_NAME_CHARACTERISTIC_UUID    "426c7565-36f0-4688-b7f5-4b646f626279"
 
 
-class WifiInfoDelegate
+class WifiServiceDelegate
 {
   public:
     virtual void wifiCommandReceived(std::string command) { }
@@ -32,11 +32,11 @@ class WifiInfoDelegate
 
 
 
-class WifiInfo:
+class WifiService:
     public BLECharacteristicCallbacks
 {
   public:
-    WifiInfo(ThrottleData& flashData);
+    WifiService(ThrottleData& flashData);
     void begin(BLEServer *bleServer, Stream *console);
 
     void onWrite(BLECharacteristic *characteristic);
@@ -44,7 +44,7 @@ class WifiInfo:
     void setConnectionState(std::string state);
 
 
-    WifiInfoDelegate *delegate;
+    WifiServiceDelegate *delegate;
 
   private:
     std::string ssid;
