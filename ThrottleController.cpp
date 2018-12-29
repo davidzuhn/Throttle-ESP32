@@ -105,6 +105,12 @@ ThrottleController::setupBLE()
 
     hw.console->print("BLE Address is ");
     hw.console->println(addr.toString().c_str());
+
+    // set up the BLE services
+    bleServer = BLEDevice::createServer();
+
+    wifiService.begin(bleServer, hw.console);
+    throttleService.begin(bleServer, hw.console);
 }
 
 bool
@@ -116,12 +122,6 @@ ThrottleController::begin()
     flashData.begin(hw.console);
 
     setupBLE();
-
-    bleServer = BLEDevice::createServer();
-
-    // set up the BLE services
-    wifiService.begin(bleServer, hw.console);
-    throttleService.begin(bleServer, hw.console);
 
     setThrottleState(TSTATE_WIFI_DISCONNECTED);
 
