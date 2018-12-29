@@ -23,7 +23,7 @@ class BLEThrottle :
 {
   public:
     BLEThrottle();
-    void begin(BLEServer *bleServer);
+    void begin(BLEServer *bleServer, Stream *console);
 
     void onWrite(BLECharacteristic *characteristic);
     void onRead(BLECharacteristic *characteristic);
@@ -38,5 +38,5 @@ class BLEThrottle :
 
     uint8_t speed;
     Direction direction;
-
+    Stream *console;
 };

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Arduino.h"
+
 #include <string>
 
 class ThrottleDataDelegate
@@ -13,7 +15,7 @@ class ThrottleData
 {
   public:
     ThrottleData();
-    bool begin();
+    bool begin(Stream *console);
 
     std::string getDeviceName();
     void saveDeviceName(std::string);
@@ -31,6 +33,9 @@ class ThrottleData
     void saveServerPort(std::string);
 
   private:
+    bool writeFile(std::string filename, std::string content);
+    std::string readFile(std::string filename, std::string defaultContent);
     std::string getFileContent(std::string path);
     bool saveContentToFile(std::string data, std::string path);
+    Stream *console;
 };

@@ -42,10 +42,10 @@ class ThrottleController:
     public ThrottleHWDelegate
 {
   public:
-    ThrottleController(ThrottleData& flashData);
+    ThrottleController();
 
+    // callables from the Arduino main program
     bool begin();
-
     void loop();
 
     void test_loop();   // run the HW tests
@@ -84,7 +84,7 @@ class ThrottleController:
     void updateFastTimeDisplay();
     void updateDirection(TogglePosition togglePosition);
     Direction directionFromTogglePosition(TogglePosition position);
-
+    void setupBLE();
 
 
     WiFiClient     client;
@@ -95,7 +95,7 @@ class ThrottleController:
     WifiInfo       wifiInfo;
     BLEThrottle    throttleInfo;
     BLEServer      *bleServer;
-    ThrottleData&  flashData;
+    ThrottleData   flashData;
     bool           restartWifiOnNextCycle;
     ThrottleState  currentThrottleState;
 };

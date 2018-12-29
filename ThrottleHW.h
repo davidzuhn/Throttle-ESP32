@@ -60,5 +60,7 @@ class ThrottleHW
     virtual void setTimeDisplay(int hour, int minute) = 0;
     virtual void setTimeStatus(TimeStatus status) = 0;
 
+    Stream* console;
+
     ThrottleHWDelegate* delegate;
 };

@@ -37,7 +37,7 @@ class WifiInfo:
 {
   public:
     WifiInfo(ThrottleData& flashData);
-    void begin(BLEServer *bleServer);
+    void begin(BLEServer *bleServer, Stream *console);
 
     void onWrite(BLECharacteristic *characteristic);
     void onRead(BLECharacteristic *characteristic);
@@ -66,4 +66,6 @@ class WifiInfo:
 
     ThrottleData& flashData;
     std::string connectionState;
+
+    Stream *console;
 };

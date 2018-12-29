@@ -1,6 +1,4 @@
 #include "ThrottleData.h"
-#include "DebugSerial.h"
-
 
 #include "FS.h"
 #include "SPIFFS.h"
@@ -22,8 +20,10 @@ ThrottleData::ThrottleData()
 
 
 bool
-ThrottleData::begin()
+ThrottleData::begin(Stream *console)
 {
+    this->console = console;
+
     bool rv = true;
 
     if(!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)){
@@ -33,34 +33,34 @@ ThrottleData::begin()
         size_t total = SPIFFS.totalBytes();
         size_t used  = SPIFFS.usedBytes();
 
-        DebugSerial.printf("FS %d/%d bytes\n", used, total);
+        console->printf("FS %d/%d bytes\n", used, total);
     }
 
     return rv;
 }
 
 
-static bool
-writeFile(std::string filename, std::string content)
+bool
+ThrottleData::writeFile(std::string filename, std::string content)
 {
     bool rv = false;
 
     File file = SPIFFS.open(filename.c_str(), FILE_WRITE);
     if (!file || file.isDirectory()) {
         rv = false;
-        DebugSerial.printf("unable to open file %s\n", filename.c_str());
+        console->printf("unable to open file %s\n", filename.c_str());
     }
     else {
         rv = file.print(content.c_str());
-        DebugSerial.printf("write file %s with '%s': %d\n", filename.c_str(), content.c_str(), rv);
+        console->printf("write file %s with '%s': %d\n", filename.c_str(), content.c_str(), rv);
     }
 
     return rv;
 }
 
 
-static std::string
-readFile(std::string filename, std::string defaultContent)
+std::string
+ThrottleData::readFile(std::string filename, std::string defaultContent)
 {
     std::string content;
 
@@ -98,13 +98,15 @@ ThrottleData::saveDeviceName(std::string deviceName)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-std::string ThrottleData::getWifiSSID()
+std::string
+ThrottleData::getWifiSSID()
 {
     std::string ssid = readFile(SSID_FILE, "SSID");
     return ssid;
 }
 
-void ThrottleData::saveWifiSSID(std::string ssid)
+void
+ThrottleData::saveWifiSSID(std::string ssid)
 {
     writeFile(SSID_FILE, ssid);
 }

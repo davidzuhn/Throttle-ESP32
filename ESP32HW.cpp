@@ -82,6 +82,14 @@
 #define EXTRA_BUTTON             (32)   // A7
 
 
+// Serial1 console pins (not the USB serial port)
+#define CONSOLE_TX               (17)
+#define CONSOLE_RX               (16)
+
+// whether to use the external TTL console (true) or the USB console (false)
+#define TTL_CONSOLE              true
+
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // These are pin numbers on the SX1509 GPIO extender
@@ -143,6 +151,13 @@ ESP32HW::ESP32HW() :
     speedPotReadCheck(),
     speedCheck()
 {
+    Serial.begin(115200);
+    Serial1.begin(115200, SERIAL_8N1, CONSOLE_TX, CONSOLE_RX);
+#if TTL_CONSOLE
+    console = &Serial1;
+#else
+    console = &Serial
+#endif
 }
 
 

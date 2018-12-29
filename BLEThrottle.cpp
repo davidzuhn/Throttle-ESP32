@@ -1,5 +1,4 @@
 #include "Arduino.h"
-#include "DebugSerial.h"
 
 #include "BLEThrottle.h"
 
@@ -11,8 +10,10 @@ BLEThrottle::BLEThrottle() :
 
 
 void
-BLEThrottle::begin(BLEServer *bleServer)
+BLEThrottle::begin(BLEServer *bleServer, Stream *console)
 {
+    this->console = console;
+
     if (bleServer) {
         throttleService = bleServer->createService(THROTTLE_SERVICE_UUID);
         speedCharacteristic = throttleService->createCharacteristic(
@@ -30,12 +31,12 @@ BLEThrottle::begin(BLEServer *bleServer)
         if (throttleService) {
         }
         else {
-            DebugSerial.print("no throttleService created");
+            console->print("no throttleService created");
         }
 
     }
     else {
-        DebugSerial.println("no bleServer in BLEThrottle::begin");
+        console->println("no bleServer in BLEThrottle::begin");
     }
 }
 
@@ -72,16 +73,16 @@ BLEThrottle::setDirection(Direction direction)
 void
 BLEThrottle::onWrite(BLECharacteristic *characteristic)
 {
-    DebugSerial.print("write for UUID: ");
-    DebugSerial.println(characteristic->getUUID().toString().c_str());
+    console->print("write for UUID: ");
+    console->println(characteristic->getUUID().toString().c_str());
 }
 
 
 void
 BLEThrottle::onRead(BLECharacteristic *characteristic)
 {
-    DebugSerial.print("read value for ");
-    DebugSerial.println(characteristic->getUUID().toString().c_str());
+    console->print("read value for ");
+    console->println(characteristic->getUUID().toString().c_str());
 
     if (characteristic->getUUID().equals(BLEUUID(THROTTLE_SPEED_CHARACTERISTIC_UUID))) {
         characteristic->setValue(&speed, 1);

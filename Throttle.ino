@@ -33,32 +33,12 @@
 */
 
 #include "ThrottleController.h"
-#include "ThrottleData.h"
 
-#include "DebugSerial.h"
-
-ThrottleData flashData;
-ThrottleController controller(flashData);
+ThrottleController controller;
 
 
-void setup() {
-#if TTL_DEBUG
-    DebugSerial.begin(115200, SERIAL_8N1, 17, 16);
-#else
-    DebugSerial.begin(115200);
-#endif
-
-    if (!flashData.begin()) {
-        Serial.println("SPIFFS Mount Failed");
-        while (true) ; //
-    }
-
-    BLEDevice::init(flashData.getDeviceName());
-
-    BLEAddress addr = BLEDevice::getAddress();
-    Serial.print("BLE Address is ");
-    Serial.println(addr.toString().c_str());
-
+void setup()
+{
     controller.begin();
 }
 

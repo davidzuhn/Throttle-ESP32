@@ -1,22 +1,22 @@
 #include "ThrottleController.h"
-#include "DebugSerial.h"
+
 #include <FunctionalInterrupt.h>
 
 using namespace std::placeholders;   // for std::bind
 
 
 
-ThrottleController::ThrottleController(ThrottleData& flashData):
+ThrottleController::ThrottleController():
     client(),
     hw(),
-    wiThrottle(DebugSerial),
+    wiThrottle(),
     port(12090),
     wifiInfo(flashData),
     bleServer(NULL),
-    flashData(flashData),
+    flashData(),
     restartWifiOnNextCycle(false)
 {
-    DebugSerial.print("ThrottleController constructed");
+    // hw.console->println("ThrottleController constructed");
 }
 
 
@@ -31,32 +31,32 @@ ThrottleController::setThrottleState(ThrottleState newState)
     // we have a new state
     switch (newState) {
         case TSTATE_UNKNOWN:
-            DebugSerial.println("now TSTATE_UNKNOWN");
+            hw.console->println("now TSTATE_UNKNOWN");
             wifiInfo.setConnectionState("UNKNOWN");
             hw.setRGB(0, 0x00, 0x00, 0x00);
             break;
         case TSTATE_WIFI_DISCONNECTED:
-            DebugSerial.println("TSTATE_WIFI_DISCONNECTED");
+            hw.console->println("TSTATE_WIFI_DISCONNECTED");
             wifiInfo.setConnectionState("WIFI_DISCONNECTED");
             hw.setRGB(0, 0xFF, 0x00, 0x00);
             break;
         case TSTATE_WIFI_CONNECTED:
-            DebugSerial.println("TSTATE_WIFI_CONNECTED");
+            hw.console->println("TSTATE_WIFI_CONNECTED");
             wifiInfo.setConnectionState("WIFI_CONNECTED");
             hw.setRGB(0, 0x00, 0x80, 0x00);
             break;
         case TSTATE_WITHROTTLE_CONNECTED:
-            DebugSerial.println("TSTATE_WITHROTTLE_CONNECTED");
+            hw.console->println("TSTATE_WITHROTTLE_CONNECTED");
             wifiInfo.setConnectionState("WITHROTTLE_CONNECTED");
             hw.setRGB(0, 0x00, 0xFF, 0x00);
             break;
         case TSTATE_WITHROTTLE_ACTIVE:
-            DebugSerial.println("TSTATE_WITHROTTLE_ACTIVE");
+            hw.console->println("TSTATE_WITHROTTLE_ACTIVE");
             hw.setRGB(0, 0x80, 0x80, 0x80);
             wifiInfo.setConnectionState("WITHROTTLE_ACTIVE");
             break;
         default:
-            DebugSerial.println("change to ___UNDEFINED___ TSTATE value ");
+            hw.console->println("change to ___UNDEFINED___ TSTATE value ");
             wifiInfo.setConnectionState("** UNDEFINED **");
             break;
     }
@@ -83,10 +83,10 @@ ThrottleController::readAccelerometer()
 
     if ((dx > ACCEL_DELTA) || (dy > ACCEL_DELTA) || (dz > ACCEL_DELTA)) {
         /* Display the results (acceleration is measured in m/s^2) */
-        DebugSerial.print("accel\tX: "); DebugSerial.print(event.acceleration.x);
-        DebugSerial.print(" \tY: "); DebugSerial.print(event.acceleration.y);
-        DebugSerial.print(" \tZ: "); DebugSerial.print(event.acceleration.z);
-        DebugSerial.println(" m/s^2 ");
+        hw.console->print("accel\tX: "); hw.console->print(event.acceleration.x);
+        hw.console->print(" \tY: "); hw.console->print(event.acceleration.y);
+        hw.console->print(" \tZ: "); hw.console->print(event.acceleration.z);
+        hw.console->println(" m/s^2 ");
 
         last_x = event.acceleration.x;
         last_y = event.acceleration.y;
@@ -97,28 +97,39 @@ ThrottleController::readAccelerometer()
 #endif
 
 
+void
+ThrottleController::setupBLE()
+{
+    BLEDevice::init(flashData.getDeviceName());
+    BLEAddress addr = BLEDevice::getAddress();
 
+    hw.console->print("BLE Address is ");
+    hw.console->println(addr.toString().c_str());
+}
 
 bool
 ThrottleController::begin()
 {
-    DebugSerial.begin(115200);
-
-
     hw.begin();
 
-    setThrottleState(TSTATE_WIFI_DISCONNECTED);
+    wiThrottle.begin(hw.console);
+    flashData.begin(hw.console);
+
+    setupBLE();
 
     bleServer = BLEDevice::createServer();
 
-    wifiInfo.begin(bleServer);
-    throttleInfo.begin(bleServer);
+    // set up the BLE services
+    wifiInfo.begin(bleServer, hw.console);
+    throttleInfo.begin(bleServer, hw.console);
+
+    setThrottleState(TSTATE_WIFI_DISCONNECTED);
 
     wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
     wifiInfo.delegate   = this;    // appropriate callbacks for BLE Wifi info
     hw.delegate         = this;    // and for hardware changes
 
-    DebugSerial.println("ThrottleController.begin complete");
+    hw.console->println("ThrottleController.begin complete");
 }
 
 
@@ -171,7 +182,7 @@ ThrottleController::loop()
     // BLE is not connected at this time, nor is WiFI
     setThrottleState(TSTATE_WIFI_DISCONNECTED);
 
-    DebugSerial.println("wifi is disconnected");
+    hw.console->println("wifi is disconnected");
 
     WiFi.disconnect();
     WiFi.onEvent(std::bind(&ThrottleController::wifiEvent, this, _1));
@@ -180,37 +191,37 @@ ThrottleController::loop()
     std::string ssid = flashData.getWifiSSID();
     std::string password = flashData.getWifiPassword();
 
-    DebugSerial.printf("Connecting to Wifi SSID:'%s' Password:'%s'\n", ssid.c_str(), password.c_str());
+    hw.console->printf("Connecting to Wifi SSID:'%s' Password:'%s'\n", ssid.c_str(), password.c_str());
 
     WiFi.begin(ssid.c_str(), password.c_str());
 
     while (WiFi.status() != WL_CONNECTED) {
         static int retryCount = 0;
         delay(500);
-        DebugSerial.println("retry wifi connection");
+        hw.console->println("retry wifi connection");
         if ((retryCount++ % 65) == 0) {
-            DebugSerial.println("");
+            hw.console->println("");
         }
     }
 
     // light blue when connected to WiThrottle server
     setThrottleState(TSTATE_WIFI_CONNECTED);
 
-    DebugSerial.println("wifi connected");
+    hw.console->println("wifi connected");
 
     while (! client.connected()) {
         hw.check();
         std::string host = flashData.getServerAddress();
         if (!client.connect(host.c_str(), port)) {
-            DebugSerial.printf("connection to %s:%d failed\n", host.c_str(), port);
+            hw.console->printf("connection to %s:%d failed\n", host.c_str(), port);
         }
         else {
-            DebugSerial.println("connection succeeded");
+            hw.console->println("connection succeeded");
             client.setNoDelay(true); // disable Nagle & packet coalescing
             wiThrottle.connect(&client);
         }
         delay(1000);
-        DebugSerial.print(":");
+        hw.console->print(":");
     }
 
     // bright blue when connected to WiThrottle server
@@ -259,8 +270,8 @@ ThrottleController::loop()
 void
 ThrottleController::receivedVersion(String version)
 {
-    DebugSerial.print("received protocol version string ");
-    DebugSerial.println(version);
+    hw.console->print("received protocol version string ");
+    hw.console->println(version);
     setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
 }
 
@@ -272,7 +283,7 @@ ThrottleController::receivedVersion(String version)
 void
 ThrottleController::receivedFunctionState(uint8_t func, bool state)
 {
-    DebugSerial.printf("display function state F%d: %d\n", func, state);
+    hw.console->printf("display function state F%d: %d\n", func, state);
 
     hw.setLight(func, state == 0 ? 0 : 255);
 
@@ -284,18 +295,18 @@ ThrottleController::receivedFunctionState(uint8_t func, bool state)
 void
 ThrottleController::receivedSpeed(int speed)
 {
-    DebugSerial.print("speed value "); DebugSerial.println(speed);
+    hw.console->print("speed value "); hw.console->println(speed);
 }
 
 
 void
 ThrottleController::receivedDirection(Direction dir)
 {
-    DebugSerial.print("direction is ");
+    hw.console->print("direction is ");
     switch(dir) {
-        case Forward: DebugSerial.println("FWD"); break;
-        case Reverse: DebugSerial.println("REV"); break;
-        default:      DebugSerial.println("UNKNOWN"); break;
+        case Forward: hw.console->println("FWD"); break;
+        case Reverse: hw.console->println("REV"); break;
+        default:      hw.console->println("UNKNOWN"); break;
     }
 }
 
@@ -303,25 +314,25 @@ ThrottleController::receivedDirection(Direction dir)
 void
 ThrottleController::receivedSpeedSteps(int steps)
 {
-    DebugSerial.print("speed steps: "); DebugSerial.println(steps);
+    hw.console->print("speed steps: "); hw.console->println(steps);
 }
 
 
 void
 ThrottleController::receivedWebPort(int port)
 {
-    DebugSerial.print("web port: "); DebugSerial.println(port);
+    hw.console->print("web port: "); hw.console->println(port);
 }
 
 
 void
 ThrottleController::receivedTrackPower(TrackPower state)
 {
-    DebugSerial.print("track power: ");
+    hw.console->print("track power: ");
     switch (state) {
-        case PowerOff: DebugSerial.println("OFF"); break;
-        case PowerOn:  DebugSerial.println("ON"); break;
-        default:       DebugSerial.println("UNKNOWN"); break;
+        case PowerOff: hw.console->println("OFF"); break;
+        case PowerOn:  hw.console->println("ON"); break;
+        default:       hw.console->println("UNKNOWN"); break;
     }
 }
 
@@ -364,11 +375,11 @@ ThrottleController::directionFromTogglePosition(TogglePosition position)
 
 void
 ThrottleController::wifiOnConnect() {
-  DebugSerial.println("STA Connected");
-  DebugSerial.print("STA IPv4: ");
-  DebugSerial.println(WiFi.localIP());
+  hw.console->println("STA Connected");
+  hw.console->print("STA IPv4: ");
+  hw.console->println(WiFi.localIP());
 
-  DebugSerial.printf("connecting to %s:%s\n",
+  hw.console->printf("connecting to %s:%s\n",
                 flashData.getServerAddress().c_str(),
                 flashData.getServerPort().c_str());
 }
@@ -407,11 +418,11 @@ ThrottleController::wifiEvent(WiFiEvent_t event) {
 void
 ThrottleController::wifiCommandReceived(std::string command)
 {
-    DebugSerial.print("wifi command received "); DebugSerial.print(command.c_str()); DebugSerial.println("");
+    hw.console->print("wifi command received "); hw.console->print(command.c_str()); hw.console->println("");
 
-    DebugSerial.printf("  ssid: '%s'\n", flashData.getWifiSSID().c_str());
-    DebugSerial.printf("  password: '%s'\n", flashData.getWifiPassword().c_str());
-    DebugSerial.printf("  server: '%s:%s'\n", flashData.getServerAddress().c_str(), flashData.getServerPort().c_str());
+    hw.console->printf("  ssid: '%s'\n", flashData.getWifiSSID().c_str());
+    hw.console->printf("  password: '%s'\n", flashData.getWifiPassword().c_str());
+    hw.console->printf("  server: '%s:%s'\n", flashData.getServerAddress().c_str(), flashData.getServerPort().c_str());
 
     restartWifiOnNextCycle = true;
 }
@@ -465,7 +476,7 @@ ThrottleController::batteryLevelChanged(int batteryLevel)
     // by calling the delegate, the HW controller module has determined
     // that this batteryLevel is "of interest" and should be reported
     // to all interested parties
-    DebugSerial.printf(">>> Battery Level: %d\n", batteryLevel);
+    hw.console->printf(">>> Battery Level: %d\n", batteryLevel);
 }
 
 
@@ -473,7 +484,7 @@ ThrottleController::batteryLevelChanged(int batteryLevel)
 void
 ThrottleController::functionButtonChanged(int func, bool pressed)
 {
-    DebugSerial.printf("** button F%d changed to %s\n", func, pressed ? "PRESSED" : "RELEASED");
+    hw.console->printf("** button F%d changed to %s\n", func, pressed ? "PRESSED" : "RELEASED");
 
     wiThrottle.setFunction(func, pressed);
 }
