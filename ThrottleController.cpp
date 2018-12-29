@@ -431,12 +431,15 @@ ThrottleController::wifiCommandReceived(std::string command)
 void
 ThrottleController::updateDirection(TogglePosition togglePosition)
 {
+    throttleService.setTogglePosition(togglePosition);
+
     // Do not change direction when the toggle is CENTER OFF
     //
     if (togglePosition == Left || togglePosition == Right) {
         Direction dir = directionFromTogglePosition(togglePosition);
         if (dir != wiThrottle.getDirection()) {
             wiThrottle.setDirection(dir);
+            throttleService.setDirection(dir);
         }
     }
 
@@ -448,6 +451,7 @@ ThrottleController::speedChanged(int newSpeed, TogglePosition togglePosition)
     updateDirection(togglePosition);
 
     wiThrottle.setSpeed(newSpeed);
+    throttleService.setSpeed(newSpeed);
 }
 
 

@@ -4,7 +4,8 @@
 
 ThrottleService::ThrottleService() :
     speed(0),
-    direction(Forward)
+    direction(Forward),
+    togglePosition(UnknownPosition)
 {
 }
 
@@ -26,14 +27,12 @@ ThrottleService::begin(BLEServer *bleServer, Stream *console)
             BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
         directionCharacteristic->setCallbacks(this);
 
+        toggleCharacteristic = throttleService->createCharacteristic(
+            THROTTLE_TOGGLE_CHARACTERISTIC_UUID,
+            BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+        toggleCharacteristic->setCallbacks(this);
+
         throttleService->start();
-
-        if (throttleService) {
-        }
-        else {
-            console->print("no throttleService created");
-        }
-
     }
     else {
         console->println("no bleServer in ThrottleService::begin");
@@ -47,7 +46,6 @@ ThrottleService::setSpeed(int speed)
     this->speed =  (uint8_t) speed;
     speedCharacteristic->setValue(&(this->speed), 1);
     speedCharacteristic->notify();
-
 }
 
 
@@ -55,6 +53,30 @@ void
 ThrottleService::setDirection(Direction direction)
 {
     this->direction = direction;
+    std::string value = directionString(direction);
+
+    directionCharacteristic->setValue(value);
+    directionCharacteristic->notify();
+}
+
+
+void
+ThrottleService::setTogglePosition(TogglePosition newTogglePosition)
+{
+    if (togglePosition != newTogglePosition) {
+        togglePosition = newTogglePosition;
+
+        std::string value = togglePositionString(togglePosition);
+        toggleCharacteristic->setValue(value);
+        toggleCharacteristic->notify();
+    }
+}
+
+
+
+std::string
+ThrottleService::directionString(Direction direction)
+{
     std::string directionString;
     switch (direction) {
         case Reverse:
@@ -65,9 +87,31 @@ ThrottleService::setDirection(Direction direction)
             break;
     }
 
-    directionCharacteristic->setValue(directionString);
-    directionCharacteristic->notify();
+    return directionString;
 }
+
+std::string
+ThrottleService::togglePositionString(TogglePosition togglePosition)
+{
+    std::string togglePositionString;
+    switch (togglePosition) {
+        case Left:
+            togglePositionString = "Left";
+            break;
+        case Right:
+            togglePositionString = "Right";
+            break;
+        case CenterOff:
+            togglePositionString = "Center-Off";
+            break;
+        default:
+            togglePositionString = "Unknown";
+            break;
+    }
+
+    return togglePositionString;
+}
+
 
 
 void
@@ -88,15 +132,11 @@ ThrottleService::onRead(BLECharacteristic *characteristic)
         characteristic->setValue(&speed, 1);
     }
     else if (characteristic->getUUID().equals(BLEUUID(THROTTLE_DIRECTION_CHARACTERISTIC_UUID))) {
-        std::string directionString;
-        switch (direction) {
-            case Reverse:
-                directionString = "Reverse";
-                break;
-            case Forward:
-                directionString = "Forward";
-                break;
-        }
-        characteristic->setValue(directionString);
+        std::string value = directionString(direction);
+        characteristic->setValue(value);
+    }
+    else if (characteristic->getUUID().equals(BLEUUID(THROTTLE_TOGGLE_CHARACTERISTIC_UUID))) {
+        std::string value = togglePositionString(togglePosition);
+        characteristic->setValue(value);
     }
 }
