@@ -121,7 +121,7 @@ ThrottleController::begin()
 
     // set up the BLE services
     wifiInfo.begin(bleServer, hw.console);
-    throttleInfo.begin(bleServer, hw.console);
+    throttleService.begin(bleServer, hw.console);
 
     setThrottleState(TSTATE_WIFI_DISCONNECTED);
 

@@ -18,11 +18,11 @@
 #define THROTTLE_DIRECTION_CHARACTERISTIC_UUID "426c7565-37e2-4688-b7f5-4b646f626279"
 
 
-class BLEThrottle :
+class ThrottleService :
     public BLECharacteristicCallbacks
 {
   public:
-    BLEThrottle();
+    ThrottleService();
     void begin(BLEServer *bleServer, Stream *console);
 
     void onWrite(BLECharacteristic *characteristic);
