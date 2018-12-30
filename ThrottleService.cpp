@@ -32,6 +32,11 @@ ThrottleService::begin(BLEServer *bleServer, Stream *console)
             BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
         toggleCharacteristic->setCallbacks(this);
 
+        addressCharacteristic = throttleService->createCharacteristic(
+            THROTTLE_ADDRESS_CHARACTERISTIC_UUID,
+            BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
+        addressCharacteristic->setCallbacks(this);
+
         throttleService->start();
     }
     else {
@@ -69,6 +74,18 @@ ThrottleService::setTogglePosition(TogglePosition newTogglePosition)
         std::string value = togglePositionString(togglePosition);
         toggleCharacteristic->setValue(value);
         toggleCharacteristic->notify();
+    }
+}
+
+
+void
+ThrottleService::setSelectedAddress(std::string newAddress)
+{
+    if (address != newAddress) {
+        address = newAddress;
+
+        addressCharacteristic->setValue(address);
+        addressCharacteristic->notify();
     }
 }
 
@@ -119,6 +136,12 @@ ThrottleService::onWrite(BLECharacteristic *characteristic)
 {
     console->print("write for UUID: ");
     console->println(characteristic->getUUID().toString().c_str());
+
+    if (characteristic->getUUID().equals(BLEUUID(THROTTLE_ADDRESS_CHARACTERISTIC_UUID))) {
+        if (delegate) {
+            delegate->throttleAddressChanged(characteristic->getValue());
+        }
+    }
 }
 
 
@@ -138,5 +161,8 @@ ThrottleService::onRead(BLECharacteristic *characteristic)
     else if (characteristic->getUUID().equals(BLEUUID(THROTTLE_TOGGLE_CHARACTERISTIC_UUID))) {
         std::string value = togglePositionString(togglePosition);
         characteristic->setValue(value);
+    }
+    else if (characteristic->getUUID().equals(BLEUUID(THROTTLE_ADDRESS_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(address);
     }
 }

@@ -126,7 +126,8 @@ ThrottleController::begin()
     setThrottleState(TSTATE_WIFI_DISCONNECTED);
 
     wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
-    wifiService.delegate = this;    // appropriate callbacks for BLE Wifi info
+    wifiService.delegate = this;    // appropriate callbacks for BLE Wifi service
+    throttleService.delegate = this;  // callbacks for the throttleService
     hw.delegate         = this;    // and for hardware changes
 
     hw.console->println("ThrottleController.begin complete");
@@ -251,6 +252,9 @@ ThrottleController::loop()
 #if 1
             if (!addressSelected) {
                 addressSelected = wiThrottle.addLocomotive(selectedAddress);
+
+                std::string sa = selectedAddress.c_str();
+                throttleService.setSelectedAddress(sa);
             }
 #endif
         }
@@ -491,4 +495,12 @@ ThrottleController::functionButtonChanged(int func, bool pressed)
     hw.console->printf("** button F%d changed to %s\n", func, pressed ? "PRESSED" : "RELEASED");
 
     wiThrottle.setFunction(func, pressed);
+}
+
+
+// this is called by the ThrottleService when the address is set
+void
+ThrottleController::throttleAddressChanged(std::string address)
+{
+    hw.console->printf("** address should be changed to %s\n", address.c_str());
 }

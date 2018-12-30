@@ -41,6 +41,7 @@ typedef enum ThrottleState
 class ThrottleController:
     public WiThrottleDelegate,
     public WifiServiceDelegate,
+    public ThrottleServiceDelegate,
     public ThrottleHWDelegate
 {
   public:
@@ -51,8 +52,6 @@ class ThrottleController:
     void loop();
 
     void test_loop();   // run the HW tests
-
-    void wifiCommandReceived(std::string command);
 
     void setThrottleState(ThrottleState newState);
 
@@ -71,6 +70,12 @@ class ThrottleController:
     void wifiOnConnect();
     void wifiOnDisconnect();
     void wifiEvent(WiFiEvent_t event);
+
+    // Wifi service callback methods
+    void wifiCommandReceived(std::string command);
+
+    // Throttle service callback methods
+    void throttleAddressChanged(std::string address);
 
     // ThrottleHW callback methods
     void speedChanged(int newSpeed, TogglePosition togglePosition);
