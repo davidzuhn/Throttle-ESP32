@@ -131,10 +131,10 @@ ThrottleController::begin()
 
     setupBLE();
 
-    wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
-    wifiService.delegate = this;    // appropriate callbacks for BLE Wifi service
+    wiThrottle.delegate      = this;    // set up callbacks for various WiThrottle activities
+    wifiService.delegate     = this;    // appropriate callbacks for BLE Wifi service
     throttleService.delegate = this;  // callbacks for the throttleService
-    hw.delegate         = this;    // and for hardware changes
+    hw.delegate              = this;    // and for hardware changes
 
     hw.console->println("ThrottleController.begin complete");
 }
@@ -160,8 +160,6 @@ ThrottleController::test_loop()
         hw.setRGB(0, i, i, i);
         delay(20);
     }
-
-
 }
 
 
@@ -276,9 +274,7 @@ ThrottleController::loop()
 
   end:
     restartWifiOnNextCycle = false;
-
     delay(3000);
-
 }
 
 
@@ -358,7 +354,8 @@ ThrottleController::receivedTrackPower(TrackPower state)
 // real second or so), even if the displayed fast time value doesn't change
 // (we want to keep the colon blinking once per second)
 
-void ThrottleController::updateFastTimeDisplay()
+void
+ThrottleController::updateFastTimeDisplay()
 {
     int hour = wiThrottle.fastTimeHours();
     int minutes = wiThrottle.fastTimeMinutes();
@@ -369,7 +366,6 @@ void ThrottleController::updateFastTimeDisplay()
     TimeStatus state = (rate == 0.0f) ? Paused : Running;
     hw.setTimeStatus(state);
 }
-
 
 
 Direction
@@ -383,10 +379,6 @@ ThrottleController::directionFromTogglePosition(TogglePosition position)
 
   return value;
 }
-
-
-
-
 
 
 void
@@ -404,6 +396,7 @@ ThrottleController::wifiOnConnect() {
                 flashData.getServerPort().c_str());
 }
 
+
 void
 ThrottleController::wifiOnDisconnect() {
   client.stop();
@@ -411,12 +404,13 @@ ThrottleController::wifiOnDisconnect() {
   setThrottleState(TSTATE_WIFI_DISCONNECTED);
 }
 
+
 void
 ThrottleController::wifiEvent(WiFiEvent_t event) {
   switch (event) {
 
     case SYSTEM_EVENT_STA_START:
-      WiFi.setHostname(flashData.getDeviceName());
+      WiFi.setHostname(flashData.getDeviceName().c_str());
 
       hw.console->print("MAC: "); hw.console->println( WiFi.macAddress().c_str() );
       break;

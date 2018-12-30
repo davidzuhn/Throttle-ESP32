@@ -19,7 +19,7 @@
 #define THROTTLE_DIRECTION_CHARACTERISTIC_UUID "426c7565-37e2-4688-b7f5-4b646f626279"
 #define THROTTLE_TOGGLE_CHARACTERISTIC_UUID    "426c7565-37e3-4688-b7f5-4b646f626279"
 #define THROTTLE_ADDRESS_CHARACTERISTIC_UUID   "426c7565-37e4-4688-b7f5-4b646f626279"
-
+#define THROTTLE_DESCRIPTION_CHARACTERISTIC_UUID "426c7565-37e5-4688-b7f5-4b646f626279"
 
 class ThrottleServiceDelegate
 {
@@ -44,6 +44,7 @@ class ThrottleService :
     void setDirection(Direction direction);
     void setTogglePosition(TogglePosition position);
     void setSelectedAddress(std::string address);
+    void setLongDescription(std::string address);
 
     ThrottleServiceDelegate *delegate;
 
@@ -57,11 +58,13 @@ class ThrottleService :
     BLECharacteristic *directionCharacteristic;
     BLECharacteristic *toggleCharacteristic;
     BLECharacteristic *addressCharacteristic;
+    BLECharacteristic *descriptionCharacteristic;
 
     uint8_t speed;
     Direction direction;
     TogglePosition togglePosition;
     std::string address;
+    std::string longDescription;
 
     Stream *console;
 };

@@ -37,6 +37,11 @@ ThrottleService::begin(BLEServer *bleServer, Stream *console)
             BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
         addressCharacteristic->setCallbacks(this);
 
+        descriptionCharacteristic = throttleService->createCharacteristic(
+            THROTTLE_DESCRIPTION_CHARACTERISTIC_UUID,
+            BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+        descriptionCharacteristic->setCallbacks(this);
+
         throttleService->start();
     }
     else {
@@ -89,6 +94,17 @@ ThrottleService::setSelectedAddress(std::string newAddress)
     }
 }
 
+
+void
+ThrottleService::setLongDescription(std::string description)
+{
+    if (longDescription != description) {
+        longDescription = description;
+
+        descriptionCharacteristic->setValue(description);
+        descriptionCharacteristic->notify();
+    }
+}
 
 
 std::string
@@ -164,5 +180,8 @@ ThrottleService::onRead(BLECharacteristic *characteristic)
     }
     else if (characteristic->getUUID().equals(BLEUUID(THROTTLE_ADDRESS_CHARACTERISTIC_UUID))) {
         characteristic->setValue(address);
+    }
+    else if (characteristic->getUUID().equals(BLEUUID(THROTTLE_DESCRIPTION_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(longDescription);
     }
 }
