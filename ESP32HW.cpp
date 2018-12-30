@@ -273,7 +273,7 @@ ESP32HW::setup_gpio()
 
     attachInterrupt(SX1509_INTR_PIN, std::bind(&ESP32HW::gpio_isr, this), FALLING);
 
-    Serial.println("gpio initialized");
+    console->println("gpio initialized");
     return true;
 }
 
@@ -289,7 +289,7 @@ ESP32HW::setup_accelerometer()
 
     attachInterrupt(ACCEL_INTR_PIN, std::bind(&ESP32HW::accelerometer_isr, this), CHANGE);
 
-    Serial.println("accelerometer initialized");
+    console->println("accelerometer initialized");
     return true;
 }
 
@@ -301,7 +301,7 @@ ESP32HW::setup_haptic_motor()
     hapticMotorController.selectLibrary(1);
     hapticMotorController.setMode(DRV2605_MODE_INTTRIG);
 
-    Serial.println("haptic controller initialized");
+    console->println("haptic controller initialized");
     return true;
 }
 
@@ -313,7 +313,7 @@ ESP32HW::setup_numeric_display()
     numericDisplay.clear();
     numericDisplay.writeDisplay();
 
-    Serial.println("numeric display initialized");
+    console->println("numeric display initialized");
     return true;
 }
 
@@ -352,7 +352,7 @@ ESP32HW::read_one_button(int intrStatus, int buttonPin, int funcNum, const char 
 {
   if (intrStatus & (1 << buttonPin)) {
     int pressed = !gpio.digitalRead(buttonPin);
-    //Serial.printf("%s %s\n", name, pressed ? "PRESSED" : "RELEASED");
+    //console->printf("%s %s\n", name, pressed ? "PRESSED" : "RELEASED");
 
     if (delegate) {
         delegate->functionButtonChanged(funcNum, pressed ? true : false);
@@ -376,7 +376,7 @@ ESP32HW::read_buttons()
 
     unsigned int intrStatus = gpio.interruptSource();
     // For debugging handiness, print the intrStatus variable.
-    // Serial.print("button interrupt: "); Serial.print(intrStatus, BIN); Serial.println("");
+    // console->print("button interrupt: "); console->print(intrStatus, BIN); console->println("");
 
     // Each bit in intStatus represents a single SX1509 I/O.  Check all thet
     // we know about each time we get notified of a change.
@@ -506,11 +506,11 @@ ESP32HW::report_speed()
     }
 
     if (toggle_position_changed) {
-        //Serial.printf("toggle position changed: %d\n", togglePosition);
+        //console->printf("toggle position changed: %d\n", togglePosition);
         delegate->togglePositionChanged(togglePosition);
     }
     if (speed_changed) {
-        //Serial.printf("speed changed: %d, toggle position: %d\n", speedValue, togglePosition);
+        //console->printf("speed changed: %d, toggle position: %d\n", speedValue, togglePosition);
         delegate->speedChanged(speedValue, togglePosition);
     }
     if (turnedToZero) {
@@ -582,7 +582,7 @@ ESP32HW::check()
     }
 
     if (handle_accelerometer) {
-        Serial.printf("* ACCEL INTR ==> %d\n", accelerometer_value_at_intr);
+        console->printf("* ACCEL INTR ==> %d\n", accelerometer_value_at_intr);
         handle_accelerometer = false;
     }
 
@@ -694,6 +694,6 @@ ESP32HW::setTimeStatus(TimeStatus status)
             break;
     }
 
-    //Serial.printf("clock brightness set to %d\n", brightness);
+    //console->printf("clock brightness set to %d\n", brightness);
     numericDisplay.setBrightness(brightness);
 }
