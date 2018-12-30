@@ -5,6 +5,13 @@
 using namespace std::placeholders;   // for std::bind
 
 
+// if no Wifi connection within this amount of time, stop
+// the connection attempt and just scan for networks
+#define WIFI_CONNECTION_TIMEOUT (15000)  // ms
+
+// rescan for new networks every this often
+#define WIFI_RETRY_DELAY_TIME  (15000) // ms
+
 
 ThrottleController::ThrottleController():
     client(),
@@ -44,7 +51,7 @@ ThrottleController::setThrottleState(ThrottleState newState)
         case TSTATE_WIFI_CONNECTED:
             hw.console->println("TSTATE_WIFI_CONNECTED");
             wifiService.setConnectionState("WIFI_CONNECTED");
-            hw.setRGB(0, 0x00, 0x80, 0x00);
+            hw.setRGB(0, 0xFF, 0x00, 0xFF);
             break;
         case TSTATE_WITHROTTLE_CONNECTED:
             hw.console->println("TSTATE_WITHROTTLE_CONNECTED");
@@ -53,7 +60,7 @@ ThrottleController::setThrottleState(ThrottleState newState)
             break;
         case TSTATE_WITHROTTLE_ACTIVE:
             hw.console->println("TSTATE_WITHROTTLE_ACTIVE");
-            hw.setRGB(0, 0x80, 0x80, 0x80);
+            hw.setRGB(0, 0x00, 0x00, 0x80);
             wifiService.setConnectionState("WITHROTTLE_ACTIVE");
             break;
         default:
@@ -177,9 +184,12 @@ ThrottleController::loop()
 
     hw.console->println("wifi is disconnected");
 
+    WiFi.mode(WIFI_MODE_STA);
+    wifiService.setDeviceMac(WiFi.macAddress().c_str());
+
     WiFi.disconnect();
     WiFi.onEvent(std::bind(&ThrottleController::wifiEvent, this, _1));
-    WiFi.mode(WIFI_MODE_STA);
+    delay(100);
 
     std::string ssid = flashData.getWifiSSID();
     std::string password = flashData.getWifiPassword();
@@ -187,18 +197,26 @@ ThrottleController::loop()
     hw.console->printf("Connecting to Wifi SSID:'%s' Password:'%s'\n", ssid.c_str(), password.c_str());
 
     WiFi.begin(ssid.c_str(), password.c_str());
+    bool connectionBegun = true;
 
     while (WiFi.status() != WL_CONNECTED) {
         hw.check();
         if (restartWifiOnNextCycle) {
             goto end;
         }
-#if 0
-        if (wifiRetryCheck.hasPassed(WIFI_RETRY_DELAY_TIME)) {
-            wifiRetryCheck.restart();
-            hw.console->println("retry wifi connection");
+
+        if (connectionBegun) {
+            if (wifiRetryCheck.hasPassed(WIFI_CONNECTION_TIMEOUT)) {
+                wifiRetryCheck.restart();
+                WiFi.disconnect();
+                delay(100);
+                connectionBegun = false;
+            }
         }
-#endif
+        else if (wifiRetryCheck.hasPassed(WIFI_RETRY_DELAY_TIME)) {
+            wifiRetryCheck.restart();
+            wifiService.scanNetworks();
+        }
     }
 
     // light blue when connected to WiThrottle server
@@ -217,12 +235,7 @@ ThrottleController::loop()
             client.setNoDelay(true); // disable Nagle & packet coalescing
             wiThrottle.connect(&client);
         }
-        delay(1000);
-        hw.console->print(":");
     }
-
-    // bright blue when connected to WiThrottle server
-    setThrottleState(TSTATE_WITHROTTLE_CONNECTED);
 
     while (true) {
         hw.check();
@@ -275,7 +288,7 @@ ThrottleController::receivedVersion(String version)
 {
     hw.console->print("received protocol version string ");
     hw.console->println(version);
-    setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
+    setThrottleState(TSTATE_WITHROTTLE_CONNECTED);
 }
 
 
@@ -382,6 +395,10 @@ ThrottleController::wifiOnConnect() {
   hw.console->print("STA IPv4: ");
   hw.console->println(WiFi.localIP());
 
+  wifiService.setDeviceAddress(WiFi.localIP());
+  wifiService.setDeviceNetmask(WiFi.subnetMask());
+  wifiService.setDeviceGateway(WiFi.gatewayIP());
+
   hw.console->printf("connecting to %s:%s\n",
                 flashData.getServerAddress().c_str(),
                 flashData.getServerPort().c_str());
@@ -399,8 +416,9 @@ ThrottleController::wifiEvent(WiFiEvent_t event) {
   switch (event) {
 
     case SYSTEM_EVENT_STA_START:
-      //set sta hostname here
-      WiFi.setHostname("mylittlethrottle");
+      WiFi.setHostname(flashData.getDeviceName());
+
+      hw.console->print("MAC: "); hw.console->println( WiFi.macAddress().c_str() );
       break;
     case SYSTEM_EVENT_STA_CONNECTED:
       break;

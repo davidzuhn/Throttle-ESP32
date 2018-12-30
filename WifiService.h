@@ -20,6 +20,12 @@
 #define WIFI_STATUS_CHARACTERISTIC_UUID    "426c7565-36e4-4688-b7f5-4b646f626279"
 #define WIFI_COMMAND_CHARACTERISTIC_UUID   "426c7565-36e5-4688-b7f5-4b646f626279"
 #define WIFI_PORT_CHARACTERISTIC_UUID      "426c7565-36e6-4688-b7f5-4b646f626279"
+#define WIFI_SSID_LIST_CHARACTERISTIC_UUID "426c7565-36e7-4688-b7f5-4b646f626279"
+
+#define WIFI_DEVICE_ADDRESS_CHARACTERISTIC_UUID "426c7565-36e8-4688-b7f5-4b646f626279"
+#define WIFI_DEVICE_NETMASK_CHARACTERISTIC_UUID "426c7565-36e9-4688-b7f5-4b646f626279"
+#define WIFI_DEVICE_GATEWAY_CHARACTERISTIC_UUID "426c7565-36ea-4688-b7f5-4b646f626279"
+#define WIFI_DEVICE_MAC_CHARACTERISTIC_UUID     "426c7565-36eb-4688-b7f5-4b646f626279"
 
 #define DEVICE_NAME_CHARACTERISTIC_UUID    "426c7565-36f0-4688-b7f5-4b646f626279"
 
@@ -43,6 +49,12 @@ class WifiService:
     void onRead(BLECharacteristic *characteristic);
     void setConnectionState(std::string state);
 
+    void setDeviceAddress(IPAddress address);
+    void setDeviceNetmask(IPAddress netmask);
+    void setDeviceGateway(IPAddress gateway);
+    void setDeviceMac(std::string mac);
+
+    void scanNetworks();
 
     WifiServiceDelegate *delegate;
 
@@ -51,6 +63,11 @@ class WifiService:
     std::string password;
     std::string serverAddress;
     std::string serverPort;
+    IPAddress deviceAddress;
+    IPAddress deviceNetmask;
+    IPAddress deviceGateway;
+    std::string deviceMac;
+
 
     BLEService *wifiService;
     BLECharacteristic *ssidCharacteristic;
@@ -59,8 +76,14 @@ class WifiService:
     BLECharacteristic *portCharacteristic;
     BLECharacteristic *statusCharacteristic;
     BLECharacteristic *commandCharacteristic;
+    BLECharacteristic *ssidListCharacteristic;
 
     BLECharacteristic *deviceNameCharacteristic;
+
+    BLECharacteristic *deviceAddressCharacteristic;
+    BLECharacteristic *deviceNetmaskCharacteristic;
+    BLECharacteristic *deviceGatewayCharacteristic;
+    BLECharacteristic *deviceMacCharacteristic;
 
     BLEAdvertising *advertisements;
 

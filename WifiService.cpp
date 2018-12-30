@@ -2,12 +2,19 @@
 
 #include "WifiService.h"
 
+#include <sstream>
+#include <WiFi.h>
+
 
 WifiService::WifiService(ThrottleData& flashData):
     ssid(),
     password(),
     serverAddress(),
     serverPort(),
+    deviceAddress(),
+    deviceNetmask(),
+    deviceGateway(),
+    deviceMac(),
     connectionState("DISCONNECTED"),
     delegate(NULL),
     advertisements(NULL),
@@ -22,7 +29,8 @@ WifiService::begin(BLEServer *bleServer, Stream *console)
     this->console = console;
 
     if (bleServer) {
-        wifiService = bleServer->createService(WIFI_SERVICE_UUID);
+        BLEUUID wifiServiceUUID(WIFI_SERVICE_UUID);
+        wifiService = bleServer->createService(wifiServiceUUID, 30);
 
         if (wifiService) {
             ssidCharacteristic = wifiService->createCharacteristic(WIFI_SSID_CHARACTERISTIC_UUID,
@@ -64,11 +72,36 @@ WifiService::begin(BLEServer *bleServer, Stream *console)
             commandCharacteristic->setCallbacks(this);
 
 
+            ssidListCharacteristic = wifiService->createCharacteristic(WIFI_SSID_LIST_CHARACTERISTIC_UUID,
+                                                                       BLECharacteristic::PROPERTY_READ
+                                                                       | BLECharacteristic::PROPERTY_NOTIFY);
+            ssidListCharacteristic->setCallbacks(this);
+
+
             deviceNameCharacteristic = wifiService->createCharacteristic(DEVICE_NAME_CHARACTERISTIC_UUID,
                                                                          BLECharacteristic::PROPERTY_READ
                                                                          | BLECharacteristic::PROPERTY_WRITE);
             deviceNameCharacteristic->setCallbacks(this);
 
+            deviceAddressCharacteristic = wifiService->createCharacteristic(WIFI_DEVICE_ADDRESS_CHARACTERISTIC_UUID,
+                                                                            BLECharacteristic::PROPERTY_READ
+                                                                            | BLECharacteristic::PROPERTY_NOTIFY);
+            deviceAddressCharacteristic->setCallbacks(this);
+
+            deviceNetmaskCharacteristic = wifiService->createCharacteristic(WIFI_DEVICE_NETMASK_CHARACTERISTIC_UUID,
+                                                                            BLECharacteristic::PROPERTY_READ
+                                                                            | BLECharacteristic::PROPERTY_NOTIFY);
+            deviceNetmaskCharacteristic->setCallbacks(this);
+
+            deviceGatewayCharacteristic = wifiService->createCharacteristic(WIFI_DEVICE_GATEWAY_CHARACTERISTIC_UUID,
+                                                                            BLECharacteristic::PROPERTY_READ
+                                                                            | BLECharacteristic::PROPERTY_NOTIFY);
+            deviceGatewayCharacteristic->setCallbacks(this);
+
+            deviceMacCharacteristic = wifiService->createCharacteristic(WIFI_DEVICE_MAC_CHARACTERISTIC_UUID,
+                                                                        BLECharacteristic::PROPERTY_READ
+                                                                        | BLECharacteristic::PROPERTY_NOTIFY);
+            deviceMacCharacteristic->setCallbacks(this);
 
 
             wifiService->start();
@@ -179,8 +212,28 @@ WifiService::onRead(BLECharacteristic *characteristic)
         characteristic->setValue(connectionState);
     }
     else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_SSID_LIST_CHARACTERISTIC_UUID))) {
+        //characteristic->setValue(ssidListString);
+    }
+    else
     if (characteristic->getUUID().equals(BLEUUID(DEVICE_NAME_CHARACTERISTIC_UUID))) {
         characteristic->setValue(flashData.getDeviceName());
+    }
+    else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_DEVICE_ADDRESS_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(deviceAddress.toString().c_str());
+    }
+    else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_DEVICE_NETMASK_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(deviceNetmask.toString().c_str());
+    }
+    else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_DEVICE_GATEWAY_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(deviceGateway.toString().c_str());
+    }
+    else
+    if (characteristic->getUUID().equals(BLEUUID(WIFI_DEVICE_MAC_CHARACTERISTIC_UUID))) {
+        characteristic->setValue(deviceMac);
     }
 }
 
@@ -193,5 +246,83 @@ WifiService::setConnectionState(std::string state)
     if (statusCharacteristic) {
         statusCharacteristic->setValue(connectionState);
         statusCharacteristic->notify();
+    }
+}
+
+
+void
+WifiService::setDeviceAddress(IPAddress address)
+{
+    deviceAddress = address;
+
+    std::string value = deviceAddress.toString().c_str();
+    if (deviceAddressCharacteristic) {
+        deviceAddressCharacteristic->setValue(value);
+        deviceAddressCharacteristic->notify();
+    }
+}
+
+
+void
+WifiService::setDeviceNetmask(IPAddress netmask)
+{
+    deviceNetmask = netmask;
+
+    std::string value = deviceNetmask.toString().c_str();
+    if (deviceNetmaskCharacteristic) {
+        deviceNetmaskCharacteristic->setValue(value);
+        deviceNetmaskCharacteristic->notify();
+    }
+}
+
+
+void
+WifiService::setDeviceGateway(IPAddress gateway)
+{
+    deviceGateway = gateway;
+
+    std::string value = deviceGateway.toString().c_str();
+    if (deviceGatewayCharacteristic) {
+        deviceGatewayCharacteristic->setValue(value);
+        deviceGatewayCharacteristic->notify();
+    }
+}
+
+
+void
+WifiService::setDeviceMac(std::string mac)
+{
+    deviceMac = mac;
+    if (deviceMacCharacteristic) {
+        deviceMacCharacteristic->setValue(deviceMac);
+        deviceMacCharacteristic->notify();
+    }
+}
+
+
+void
+WifiService::scanNetworks()
+{
+    int n = WiFi.scanNetworks();
+
+    if (n > 0) {
+        std::ostringstream s;
+        s << n;
+
+        // print the list of networks seen:
+        console->print("SSID List:");
+        console->println(n);
+
+        // print the network number and name for each network found:
+        for (int thisNet = 0; thisNet < n; thisNet++) {
+            std::string ssid = WiFi.SSID(thisNet).c_str();
+            int32_t rssi = WiFi.RSSI(thisNet);
+            std::string encryption = ((WiFi.encryptionType(thisNet) == WIFI_AUTH_OPEN) ? "OPEN " : "*");
+
+            s << "|" << ssid << "," << rssi << "," << encryption;
+        }
+
+        const std::string wifiListString(s.str());
+        console->printf("wifiListString is %s\n", wifiListString.c_str());
     }
 }
