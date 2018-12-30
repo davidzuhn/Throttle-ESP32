@@ -105,4 +105,7 @@ class ThrottleController:
     ThrottleData   flashData;
     bool           restartWifiOnNextCycle;
     ThrottleState  currentThrottleState;
+    Chrono         wifiRetryCheck;
+
+    String         selectedAddress;
 };

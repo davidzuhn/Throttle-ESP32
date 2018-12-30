@@ -14,7 +14,8 @@ ThrottleController::ThrottleController():
     wifiService(flashData),
     bleServer(NULL),
     flashData(),
-    restartWifiOnNextCycle(false)
+    restartWifiOnNextCycle(false),
+    wifiRetryCheck()
 {
     // hw.console->println("ThrottleController constructed");
 }
@@ -123,8 +124,6 @@ ThrottleController::begin()
 
     setupBLE();
 
-    setThrottleState(TSTATE_WIFI_DISCONNECTED);
-
     wiThrottle.delegate = this;    // set up callbacks for various WiThrottle activities
     wifiService.delegate = this;    // appropriate callbacks for BLE Wifi service
     throttleService.delegate = this;  // callbacks for the throttleService
@@ -172,13 +171,6 @@ ThrottleController::loop()
 {
     bool addressSelected = false;
     bool nameSent = false;
-    String selectedAddress = "S23";
-
-
-    delay(10000);
-
-//    clockDisplay.clear();
-//    clockDisplay.writeDisplay();
 
     // BLE is not connected at this time, nor is WiFI
     setThrottleState(TSTATE_WIFI_DISCONNECTED);
@@ -197,12 +189,16 @@ ThrottleController::loop()
     WiFi.begin(ssid.c_str(), password.c_str());
 
     while (WiFi.status() != WL_CONNECTED) {
-        static int retryCount = 0;
-        delay(500);
-        hw.console->println("retry wifi connection");
-        if ((retryCount++ % 65) == 0) {
-            hw.console->println("");
+        hw.check();
+        if (restartWifiOnNextCycle) {
+            goto end;
         }
+#if 0
+        if (wifiRetryCheck.hasPassed(WIFI_RETRY_DELAY_TIME)) {
+            wifiRetryCheck.restart();
+            hw.console->println("retry wifi connection");
+        }
+#endif
     }
 
     // light blue when connected to WiThrottle server
@@ -250,7 +246,7 @@ ThrottleController::loop()
             }
 
 #if 1
-            if (!addressSelected) {
+            if (!addressSelected && selectedAddress != "") {
                 addressSelected = wiThrottle.addLocomotive(selectedAddress);
 
                 std::string sa = selectedAddress.c_str();
@@ -265,7 +261,10 @@ ThrottleController::loop()
     }
 
 
+  end:
     restartWifiOnNextCycle = false;
+
+    delay(3000);
 
 }
 
@@ -503,4 +502,5 @@ void
 ThrottleController::throttleAddressChanged(std::string address)
 {
     hw.console->printf("** address should be changed to %s\n", address.c_str());
+    selectedAddress = String(address.c_str());
 }
