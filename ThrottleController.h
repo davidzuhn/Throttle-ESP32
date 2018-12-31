@@ -110,20 +110,20 @@ class ThrottleController:
     void setupBLE();
 
 
-    WiFiClient     client;
-    ESP32HW        hw;
-    WiThrottle     wiThrottle;
-    bool           wifiConnected;
-    int            port;
-    WifiService    wifiService;
-    ThrottleService throttleService;
-    BatteryService batteryService;
+    WiFiClient        client;
+    ESP32HW           hw;
+    WiThrottle        wiThrottle;
+    bool              wifiConnected;
+    int               port;
+    WifiService       wifiService;
+    ThrottleService   throttleService;
+    BatteryService    batteryService;
     DeviceInfoService deviceInfoService;
-    BLEServer      *bleServer;
-    ThrottleData   flashData;
-    bool           restartWifiOnNextCycle;
-    ThrottleState  currentThrottleState;
-    Chrono         wifiRetryCheck;
+    BLEServer         *bleServer;
+    ThrottleData      flashData;
+    bool              restartWifiOnNextCycle;
+    ThrottleState     currentThrottleState;
+    Chrono            wifiRetryCheck;
 
-    String         selectedAddress;
+    String            selectedAddress;
 };
