@@ -126,4 +126,5 @@ class ThrottleController:
     Chrono            wifiRetryCheck;
 
     String            selectedAddress;
+    bool              addressIsSelected;
 };

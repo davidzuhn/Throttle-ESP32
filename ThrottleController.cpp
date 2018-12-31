@@ -24,7 +24,8 @@ ThrottleController::ThrottleController():
     bleServer(NULL),
     flashData(),
     restartWifiOnNextCycle(false),
-    wifiRetryCheck()
+    wifiRetryCheck(),
+    addressIsSelected(false)
 {
     // hw.console->println("ThrottleController constructed");
 }
@@ -185,7 +186,6 @@ ThrottleController::test_loop()
 void
 ThrottleController::loop()
 {
-    bool addressSelected = false;
     bool nameSent = false;
 
     // BLE is not connected at this time, nor is WiFI
@@ -268,8 +268,13 @@ ThrottleController::loop()
             }
 
 #if 1
-            if (!addressSelected && selectedAddress != "") {
-                addressSelected = wiThrottle.addLocomotive(selectedAddress);
+            if (!addressIsSelected) {
+                if (selectedAddress != "") {
+                    // deselect the current address; setting it to 0 speed first
+                    wiThrottle.setSpeed(0);
+                    wiThrottle.releaseLocomotive();
+                }
+                addressIsSelected = wiThrottle.addLocomotive(selectedAddress);
 
                 std::string sa = selectedAddress.c_str();
                 throttleService.setSelectedAddress(sa);
@@ -532,4 +537,5 @@ ThrottleController::throttleAddressChanged(std::string address)
 {
     hw.console->printf("** address should be changed to %s\n", address.c_str());
     selectedAddress = String(address.c_str());
+    addressIsSelected = false;
 }
