@@ -36,6 +36,8 @@ class ESP32HW : public ThrottleHW
 
     void resetStats();
 
+    std::string getHWVersion();
+
 
 private:
     // HW interfaces

@@ -124,14 +124,12 @@ ThrottleController::setupBLE()
     throttleService.begin(bleServer, hw.console);
     batteryService.begin(bleServer, hw.console);
 
-    //    deviceInfoService.setDeviceName("moo");
-
-    deviceInfoService.setMfgName("Blue Knobby Systems");
-    deviceInfoService.setModelNumber("BKT-0revB");
-    deviceInfoService.setSerialNumber("000001");
-    deviceInfoService.setHWRevision("A01");
+    deviceInfoService.setMfgName(MANUFACTURER_NAME);
+    deviceInfoService.setModelNumber(MODEL_NUMBER);
+    deviceInfoService.setSerialNumber(flashData.getSerialNumber());
+    deviceInfoService.setHWRevision(hw.getHWVersion());
     deviceInfoService.setFWRevision(ESP.getSdkVersion());
-    deviceInfoService.setSWRevision("0.010");
+    deviceInfoService.setSWRevision(SW_VERSION);
 }
 
 bool

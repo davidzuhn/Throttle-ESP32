@@ -63,6 +63,8 @@ class ThrottleHW
     // Call this function to reset all "last known" values and have them be sent again
     virtual void resetStats();
 
+    virtual std::string getHWVersion();
+
     Stream* console;
 
     ThrottleHWDelegate* delegate;

@@ -24,7 +24,22 @@
 #include "BatteryService.h"
 #include "DeviceInfoService.h"
 
-#define ADAFRUIT_ALPHANUM 1
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// version numbers
+//
+#define SW_VERSION "0.10"
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// manufacturer information
+//
+#define MANUFACTURER_NAME  "Blue Knobby Systems"
+#define MODEL_NUMBER       "BKT-0revB"
+
+
 
 
 

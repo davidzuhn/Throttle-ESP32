@@ -705,3 +705,11 @@ ESP32HW::setTimeStatus(TimeStatus status)
     //console->printf("clock brightness set to %d\n", brightness);
     numericDisplay.setBrightness(brightness);
 }
+
+
+
+std::string
+ESP32HW::getHWVersion()
+{
+    return "0revB.01";
+}

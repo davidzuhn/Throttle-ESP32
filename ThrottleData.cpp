@@ -13,6 +13,8 @@
 #define PASSWORD_FILE "/password"
 #define SERVER_ADDRESS_FILE "/server"
 #define SERVER_PORT_FILE "/serverPort"
+#define SERIAL_NUMBER_FILE "/serialNumber"
+
 
 ThrottleData::ThrottleData()
 {
@@ -94,6 +96,21 @@ void
 ThrottleData::saveDeviceName(std::string deviceName)
 {
     writeFile(DEVICE_NAME_FILE, deviceName);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string
+ThrottleData::getSerialNumber()
+{
+    std::string serialNumber = readFile(SERIAL_NUMBER_FILE, "00000000");
+    return serialNumber;
+}
+
+void
+ThrottleData::saveSerialNumber(std::string serialNumber)
+{
+    writeFile(SERIAL_NUMBER_FILE, serialNumber);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

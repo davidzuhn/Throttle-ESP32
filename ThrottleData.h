@@ -20,6 +20,9 @@ class ThrottleData
     std::string getDeviceName();
     void saveDeviceName(std::string);
 
+    std::string getSerialNumber();
+    void saveSerialNumber(std::string);
+
     std::string getWifiSSID();
     void saveWifiSSID(std::string);
 
