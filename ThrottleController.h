@@ -21,7 +21,8 @@
 // Several BLE Services available on this device...
 #include "ThrottleService.h"
 #include "WifiService.h"
-
+#include "BatteryService.h"
+#include "DeviceInfoService.h"
 
 #define ADAFRUIT_ALPHANUM 1
 
@@ -101,6 +102,8 @@ class ThrottleController:
     int            port;
     WifiService    wifiService;
     ThrottleService throttleService;
+    BatteryService batteryService;
+    DeviceInfoService deviceInfoService;
     BLEServer      *bleServer;
     ThrottleData   flashData;
     bool           restartWifiOnNextCycle;

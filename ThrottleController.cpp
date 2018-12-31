@@ -2,6 +2,8 @@
 
 #include <FunctionalInterrupt.h>
 
+#include "ESP.h"
+
 using namespace std::placeholders;   // for std::bind
 
 
@@ -117,8 +119,19 @@ ThrottleController::setupBLE()
     // set up the BLE services
     bleServer = BLEDevice::createServer();
 
+    deviceInfoService.begin(bleServer, hw.console);
     wifiService.begin(bleServer, hw.console);
     throttleService.begin(bleServer, hw.console);
+    batteryService.begin(bleServer, hw.console);
+
+    //    deviceInfoService.setDeviceName("moo");
+
+    deviceInfoService.setMfgName("Blue Knobby Systems");
+    deviceInfoService.setModelNumber("BKT-0revB");
+    deviceInfoService.setSerialNumber("000001");
+    deviceInfoService.setHWRevision("A01");
+    deviceInfoService.setFWRevision(ESP.getSdkVersion());
+    deviceInfoService.setSWRevision("0.010");
 }
 
 bool
@@ -262,6 +275,8 @@ ThrottleController::loop()
 
                 std::string sa = selectedAddress.c_str();
                 throttleService.setSelectedAddress(sa);
+                hw.resetStats();
+                setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
             }
 #endif
         }
@@ -495,7 +510,11 @@ ThrottleController::batteryLevelChanged(int batteryLevel)
     // by calling the delegate, the HW controller module has determined
     // that this batteryLevel is "of interest" and should be reported
     // to all interested parties
-    hw.console->printf(">>> Battery Level: %d\n", batteryLevel);
+    int percentage = map(batteryLevel, 3200, 4300, 0, 100);
+    percentage = constrain(percentage, 0, 100);
+
+    batteryService.setBatteryLevel(percentage);
+    hw.console->printf(">>> Battery Level: %d (%d%%)\n", batteryLevel, percentage);
 }
 
 
