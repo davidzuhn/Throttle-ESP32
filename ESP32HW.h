@@ -34,6 +34,8 @@ class ESP32HW : public ThrottleHW
 
     void setTimeStatus(TimeStatus status);
 
+    void resetStats();
+
 
 private:
     // HW interfaces

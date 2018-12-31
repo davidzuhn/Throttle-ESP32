@@ -161,6 +161,14 @@ ESP32HW::ESP32HW() :
 }
 
 
+void
+ESP32HW::resetStats()
+{
+    previousSpeedValue = penultimateSpeedValue = -1;
+    previousTogglePosition = UnknownPosition;
+}
+
+
 bool
 ESP32HW::begin()
 {
