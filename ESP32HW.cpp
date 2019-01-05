@@ -89,6 +89,8 @@
 // whether to use the external TTL console (true) or the USB console (false)
 #define TTL_CONSOLE              true
 
+// GREEN TTL serial cable outermost, WHITE next, BLACK to ground
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -156,7 +158,7 @@ ESP32HW::ESP32HW() :
 #if TTL_CONSOLE
     console = &Serial1;
 #else
-    console = &Serial
+    console = &Serial;
 #endif
 }
 
@@ -486,7 +488,7 @@ ESP32HW::report_speed()
     // reset the accumulator
     speedAccumulator = speedCount = 0;
 
-    if (speedValue == 0 && previousSpeedValue != 0) {
+    if (speedValue == 0 && previousSpeedValue > 0) {
         turnedToZero = true;
     }
     if (speedValue == 126 && previousSpeedValue != 126) {
@@ -496,6 +498,8 @@ ESP32HW::report_speed()
     if (togglePosition == CenterOff) {
         // center off position
         speedValue = 0;
+        turnedToZero = turnedToMax = false;
+
         if (previousSpeedValue != 0) {
             previousSpeedValue = penultimateSpeedValue = 0;
             speed_changed = true;
@@ -521,6 +525,7 @@ ESP32HW::report_speed()
         //console->printf("speed changed: %d, toggle position: %d\n", speedValue, togglePosition);
         delegate->speedChanged(speedValue, togglePosition);
     }
+
     if (turnedToZero) {
         triggerHapticMotor(26);
     }

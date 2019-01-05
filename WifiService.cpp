@@ -324,5 +324,8 @@ WifiService::scanNetworks()
 
         const std::string wifiListString(s.str());
         console->printf("wifiListString is %s\n", wifiListString.c_str());
+
+        ssidListCharacteristic->setValue(wifiListString);
+        ssidListCharacteristic->notify();
     }
 }

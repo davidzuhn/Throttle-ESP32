@@ -203,9 +203,15 @@ ThrottleController::loop()
     std::string ssid = flashData.getWifiSSID();
     std::string password = flashData.getWifiPassword();
 
-    hw.console->printf("Connecting to Wifi SSID:'%s' Password:'%s'\n", ssid.c_str(), password.c_str());
+    if (password == "") {
+        hw.console->printf("Connecting to Wifi SSID:'%s' (and no password)\n", ssid.c_str());
+        WiFi.begin(ssid.c_str());
+    }
+    else {
+        hw.console->printf("Connecting to Wifi SSID:'%s' Password:'%s'\n", ssid.c_str(), password.c_str());
+        WiFi.begin(ssid.c_str(), password.c_str());
+    }
 
-    WiFi.begin(ssid.c_str(), password.c_str());
     bool connectionBegun = true;
 
     while (WiFi.status() != WL_CONNECTED) {
@@ -267,21 +273,23 @@ ThrottleController::loop()
                 nameSent = true;
             }
 
-#if 1
             if (!addressIsSelected) {
                 if (selectedAddress != "") {
+                    hw.console->print("release current address ");
+                    hw.console->println(selectedAddress);
+
                     // deselect the current address; setting it to 0 speed first
                     wiThrottle.setSpeed(0);
                     wiThrottle.releaseLocomotive();
-                }
-                addressIsSelected = wiThrottle.addLocomotive(selectedAddress);
 
-                std::string sa = selectedAddress.c_str();
-                throttleService.setSelectedAddress(sa);
-                hw.resetStats();
-                setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
+                    addressIsSelected = wiThrottle.addLocomotive(selectedAddress);
+
+                    std::string sa = selectedAddress.c_str();
+                    throttleService.setSelectedAddress(sa);
+                    hw.resetStats();
+                    setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
+                }
             }
-#endif
         }
 
         if (restartWifiOnNextCycle) {
@@ -433,10 +441,13 @@ ThrottleController::wifiEvent(WiFiEvent_t event) {
       hw.console->print("MAC: "); hw.console->println( WiFi.macAddress().c_str() );
       break;
     case SYSTEM_EVENT_STA_CONNECTED:
+        hw.console->println("STA connected");
       break;
     case SYSTEM_EVENT_AP_STA_GOT_IP6:
+        hw.console->println("STA connected IPv6");
       break;
     case SYSTEM_EVENT_STA_GOT_IP:
+        hw.console->println("got IP");
       wifiOnConnect();
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -535,7 +546,10 @@ ThrottleController::functionButtonChanged(int func, bool pressed)
 void
 ThrottleController::throttleAddressChanged(std::string address)
 {
-    hw.console->printf("** address should be changed to %s\n", address.c_str());
-    selectedAddress = String(address.c_str());
-    addressIsSelected = false;
+    String newAddress(address.c_str());
+    if (newAddress != selectedAddress) {
+        hw.console->printf("** address should be changed to %s\n", newAddress.c_str());
+        selectedAddress = newAddress;
+        addressIsSelected = false;
+    }
 }
