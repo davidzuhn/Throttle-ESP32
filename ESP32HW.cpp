@@ -58,7 +58,7 @@
 //
 
 // Linear potentiometer used for speed control (analog value read via ADC)
-#define SPEED_KNOB               (A4)
+#define SPEED_KNOB               (36)   // ESP32 A4
 
 // Toggle Switch for direction selection.  At most ONE of these two will be
 // connected to ground.  Using a CENTER OFF toggle, it is possible that
@@ -70,7 +70,7 @@
 #define PILOT_LIGHT              (21)
 
 // battery level is read through this pin (analog value read via ADC)
-#define BATTERY_LEVEL_PIN        (A13)
+#define BATTERY_LEVEL_PIN        (36)   // A13
 
 // do not report any changes to the current battery level until they exceed this
 // value (in mV)
