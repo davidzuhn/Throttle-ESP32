@@ -303,6 +303,7 @@ WifiService::setDeviceMac(std::string mac)
 void
 WifiService::scanNetworks()
 {
+    auto start = millis();
     int n = WiFi.scanNetworks();
 
     if (n > 0) {
@@ -328,4 +329,8 @@ WifiService::scanNetworks()
         ssidListCharacteristic->setValue(wifiListString);
         ssidListCharacteristic->notify();
     }
+    auto end = millis();
+
+    auto duration = end - start;
+    console->printf("scanNetworks took %u millis\n", duration);
 }
