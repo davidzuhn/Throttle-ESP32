@@ -9,7 +9,7 @@ using namespace std::placeholders;   // for std::bind
 
 // if no Wifi connection within this amount of time, stop
 // the connection attempt and just scan for networks
-#define WIFI_CONNECTION_TIMEOUT (15000)  // ms
+#define WIFI_CONNECTION_TIMEOUT (15000*10)  // ms
 
 // rescan for new networks every this often
 #define WIFI_RETRY_DELAY_TIME  (15000) // ms
@@ -196,15 +196,18 @@ ThrottleController::loop()
     WiFi.mode(WIFI_MODE_STA);
     wifiService.setDeviceMac(WiFi.macAddress().c_str());
 
-    WiFi.disconnect();
+    hw.console->printf("start of loop(): disconnecting\n");
     WiFi.onEvent(std::bind(&ThrottleController::wifiEvent, this, _1));
+    //WiFi.disconnect();
     delay(100);
 
     std::string ssid = flashData.getWifiSSID();
     std::string password = flashData.getWifiPassword();
 
+    hw.console->printf("Wifi SSID: '%s', Password: '%s'\n", ssid.c_str(), password.c_str());
+
     if (password == "") {
-        hw.console->printf("Connecting to Wifi SSID:'%s' (and no password)\n", ssid.c_str());
+        hw.console->printf("Connecting to Wifi SSID:'%s' (with no password)\n", ssid.c_str());
         WiFi.begin(ssid.c_str());
     }
     else {
@@ -223,6 +226,7 @@ ThrottleController::loop()
         if (connectionBegun) {
             if (wifiRetryCheck.hasPassed(WIFI_CONNECTION_TIMEOUT)) {
                 wifiRetryCheck.restart();
+                hw.console->printf("disconnect in WiFi wait loop\n");
                 WiFi.disconnect();
                 delay(100);
                 connectionBegun = false;
@@ -250,6 +254,12 @@ ThrottleController::loop()
             client.setNoDelay(true); // disable Nagle & packet coalescing
             wiThrottle.connect(&client);
         }
+#if 0
+        if (wifiRetryCheck.hasPassed(WIFI_RETRY_DELAY_TIME)) {
+            wifiRetryCheck.restart();
+            wifiService.scanNetworks();
+        }
+#endif
     }
 
     while (true) {
@@ -263,6 +273,7 @@ ThrottleController::loop()
                 wiThrottle.requireHeartbeat();
             }
             if (! client.connected()) {
+                hw.console->printf("no client connected, disconnecting the withrottle\n");
                 setThrottleState(TSTATE_WIFI_DISCONNECTED);
                 wiThrottle.disconnect();
                 return;
@@ -271,6 +282,8 @@ ThrottleController::loop()
             if (!nameSent) {
                 wiThrottle.setDeviceName(flashData.getDeviceName().c_str());
                 nameSent = true;
+
+                wiThrottle.setDeviceID("BKT0");
             }
 
             if (!addressIsSelected) {
@@ -286,7 +299,6 @@ ThrottleController::loop()
 
                     std::string sa = selectedAddress.c_str();
                     throttleService.setSelectedAddress(sa);
-                    hw.resetStats();
                     setThrottleState(TSTATE_WITHROTTLE_ACTIVE);
                 }
             }
@@ -364,6 +376,37 @@ ThrottleController::receivedWebPort(int port)
 
 
 void
+ThrottleController::addressAdded(String address, String entry)
+{
+    hw.console->printf("adding address %s: %s, resetting HW stats\n", address.c_str(), entry.c_str());
+    hw.resetStats();
+}
+
+
+void
+ThrottleController::addressRemoved(String address, String command)
+{
+    hw.console->printf("removing address %s: %s\n", address.c_str(), command.c_str());
+}
+
+
+void
+ThrottleController::addressStealNeeded(String address, String entry)
+{
+    static int stealTryCount = 0;
+    hw.console->printf("address in use (stealable: %d) %s: %s\n",
+                       stealTryCount,  address.c_str(), entry.c_str());
+
+    if (stealTryCount++ < 3) {
+        // TODO: ask the user about stealing?
+        wiThrottle.stealLocomotive(address);
+    }
+}
+
+
+
+
+void
 ThrottleController::receivedTrackPower(TrackPower state)
 {
     hw.console->print("track power: ");
@@ -409,9 +452,12 @@ ThrottleController::directionFromTogglePosition(TogglePosition position)
 
 void
 ThrottleController::wifiOnConnect() {
-  hw.console->println("STA Connected");
-  hw.console->print("STA IPv4: ");
+  hw.console->println(__FUNCTION__);
+  hw.console->print("Device IPv4: ");
   hw.console->println(WiFi.localIP());
+  Serial.print("Hostname is: ");
+  Serial.println(WiFi.getHostname());
+
 
   wifiService.setDeviceAddress(WiFi.localIP());
   wifiService.setDeviceNetmask(WiFi.subnetMask());
@@ -425,8 +471,9 @@ ThrottleController::wifiOnConnect() {
 
 void
 ThrottleController::wifiOnDisconnect() {
+  hw.console->printf("wifiOnDisconnect()\n");
   client.stop();
-  wiThrottle.disconnect();
+  //wiThrottle.disconnect();
   setThrottleState(TSTATE_WIFI_DISCONNECTED);
 }
 
@@ -436,25 +483,30 @@ ThrottleController::wifiEvent(WiFiEvent_t event) {
   switch (event) {
 
     case SYSTEM_EVENT_STA_START:
-      WiFi.setHostname(flashData.getDeviceName().c_str());
-
-      hw.console->print("MAC: "); hw.console->println( WiFi.macAddress().c_str() );
-      break;
+        hw.console->println("SYSTEM_EVENT_STA_START");
+        WiFi.setHostname(flashData.getDeviceName().c_str());
+        hw.console->printf("MAC: %s\n", WiFi.macAddress().c_str() );
+        break;
     case SYSTEM_EVENT_STA_CONNECTED:
-        hw.console->println("STA connected");
-      break;
+        hw.console->println("SYSTEM_EVENT_STA_CONNECTED");
+        break;
     case SYSTEM_EVENT_AP_STA_GOT_IP6:
-        hw.console->println("STA connected IPv6");
-      break;
+        hw.console->println("SYSTEM_EVENT_AP_STA_GOT_IP");
+        break;
     case SYSTEM_EVENT_STA_GOT_IP:
-        hw.console->println("got IP");
-      wifiOnConnect();
-      break;
+        hw.console->println("SYSTEM_EVENT_STA_GOT_IP");
+        wifiOnConnect();
+        break;
+    case SYSTEM_EVENT_STA_LOST_IP:
+        hw.console->println("SYSTEM_EVENT_STA_LOST_IP");
+        break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
-      wifiOnDisconnect();
-      break;
+        hw.console->println("SYSTEM_EVENT_STA_DISCONNECTED");
+        wifiOnDisconnect();
+        break;
     default:
-      break;
+        hw.console->printf("unknown WiFi event: %d\n", (int) event);
+        break;
   }
 }
 

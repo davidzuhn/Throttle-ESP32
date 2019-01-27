@@ -81,6 +81,10 @@ class ThrottleController:
     void receivedTrackPower(TrackPower state);
     void receivedVersion(String version);
     void receivedWebPort(int port);
+    void addressAdded(String address, String entry);
+    void addressRemoved(String address, String command);
+    void addressStealNeeded(String address, String entry);
+
 
     // WiFi callback methods
     void wifiOnConnect();
